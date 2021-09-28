@@ -1,0 +1,16 @@
+[submodule "cli"]
+	path = cli
+	url = https://github.com/annexi-strayline/ASAP-CLI.git
+	branch = 0.1
+[submodule "hex"]
+	path = hex
+	url = https://github.com/annexi-strayline/ASAP-HEX.git
+	branch = 0.1
+[submodule "unicode"]
+	path = unicode
+	url = https://github.com/annexi-strayline/ASAP-Unicode.git
+	branch = 0.1
+[submodule "modular_hashing"]
+	path = modular_hashing
+	url = https://github.com/annexi-strayline/ASAP-Modular_Hashing.git
+	branch = 0.1
