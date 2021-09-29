@@ -66,12 +66,17 @@ package body Checkout_Git is
    Output_Poll_Rate: constant Duration := 0.5;
    
    package Output_Buffers is 
-     new Ada.Strings.Bounded.Generic_Bounded_Length (2048);
+     new Ada.Strings.Bounded.Generic_Bounded_Length (8096);
    
    procedure Buffer_Append (Buffer: in out Output_Buffers.Bounded_String;
                             Item  : in     String)
    is begin
-      Output_Buffers.Append (Source => Buffer, New_Item => Item);
+      -- Since we are using bounded inputs, we'd rather not crash just because
+      -- the input exceeds the buffers, but rather have it truncate.
+      
+      Output_Buffers.Append (Source   => Buffer,
+                             New_Item => Item,
+                             Drop     => Ada.Strings.Right);
    end Buffer_Append;
    
    procedure Wait_And_Buffer is new Child_Processes.Wait_And_Buffer 
