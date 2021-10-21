@@ -77,9 +77,11 @@
 /*   Convention    => C,                                   */
 /*   External_Name => "__chldproc_platform_fork_and_exec"; */
 
+/* The names stdinput, stdoutput, and stderror below avoid */
+/* colliding with macros on OpenBSD.                       */
 extern int __chldproc_platform_fork_and_exec
 (char  * path, char ** args, char * wdir,
- pid_t * pid,  int  * stdin, int  * stdout, int * stderr)
+ pid_t * pid,  int  * stdinput, int  * stdoutput, int * stderror)
 {
      pid_t event_horizon;
      
@@ -115,21 +117,21 @@ extern int __chldproc_platform_fork_and_exec
           *pid = event_horizon;
           
           /* Child's stdin, so we take the write-end     */
-          *stdin  = stdin_pipe[WRITE_END];
+          *stdinput  = stdin_pipe[WRITE_END];
 
           /* Child's stdout/err, so we take the read-end */
-          *stdout = stdout_pipe[READ_END];
-          *stderr = stderr_pipe[READ_END];
+          *stdoutput = stdout_pipe[READ_END];
+          *stderror = stderr_pipe[READ_END];
 
           /* Set non-blocking on the read pipes */
-          modflags = fcntl ( *stdin, F_GETFL );
-          fcntl ( *stdin, F_SETFL, modflags | O_NONBLOCK );
+          modflags = fcntl ( *stdinput, F_GETFL );
+          fcntl ( *stdinput, F_SETFL, modflags | O_NONBLOCK );
           
-          modflags = fcntl ( *stdout, F_GETFL );
-          fcntl ( *stdout, F_SETFL, modflags | O_NONBLOCK );
+          modflags = fcntl ( *stdoutput, F_GETFL );
+          fcntl ( *stdoutput, F_SETFL, modflags | O_NONBLOCK );
 
-          modflags = fcntl ( *stderr, F_GETFL );
-          fcntl ( *stderr, F_SETFL, modflags | O_NONBLOCK );
+          modflags = fcntl ( *stderror, F_GETFL );
+          fcntl ( *stderror, F_SETFL, modflags | O_NONBLOCK );
 
           return (0);
      }
