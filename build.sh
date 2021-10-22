@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 python3 platform_config.py
 gcc -c ./cli/tty_ifo.c
 gcc -c *.c
