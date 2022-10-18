@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2022, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -186,6 +186,9 @@ package body Registrar.Dependency_Processing is
    -- After doing our main job of merging subunit dependencies up to the
    -- parent, we also need to set-up the reverse depependency queues,
    -- and then dispatch Fan-Out orders (Phase 2)
+   --
+
+   
    
    procedure Execute (Order: in out Merge_Subunits_Order) is
       use Subsystems;
@@ -211,69 +214,93 @@ package body Registrar.Dependency_Processing is
       Fan_Out.Unit_Map_Queues   := new Map_Queue_Sets.Set;
       Fan_Out.Subsys_Map_Queues := new Map_Queue_Sets.Set;
       
-      for Unit of Order.All_Units loop
+      begin
+         -- Note that since Merge_Subunits_Order's don't have trackers assigned
+         -- due to the more hands-on relationship this operation has with
+         -- multiple trackers, we need to ensure we don't propegate any
+         -- exception to the worker without properly aborting things on the
+         -- Merge_Subunits_Progress tracker where appropriate.
+         --
+         -- If we don't do this, the main application will hang.
+         --
+         -- To avoid an overly complicated implementation for what is most
+         -- likely a very edge case, we take a full abort appoach where we just
+         -- mark all remaining subunits as "failed" and kill the job.
          
-         if Unit.State = Requested then
-            -- For Requested units - if we have them here it means none of the
-            -- subsystems that were supposed to contain them actually do, or
-            -- the entire subsystem could not be aquired.
-            --
-            -- We still want to compute the dependency maps so that we can give
-            -- the user a picture of where the missing units were being withed
-            -- from (similarily for subystems).
-            --
-            -- For those units, we need to add an empty set to the forward
-            -- dependency map so that we don't need to check for No_Element
-            -- cursors everywhere else. This makes particular sense considering
-            -- this work order is single issue (not parallel), so there will be
-            -- no contention on the dependency maps anyways.
+         for Unit of Order.All_Units loop
             
-            declare
-               Inserted: Boolean;
-            begin
-               Registry.Unit_Forward_Dependencies.Insert
-                 (Key      => Unit.Name, 
-                  New_Item => Unit_Names.Sets.Empty_Set,
-                  Inserted => Inserted);
+            if Unit.State = Requested then
+               -- For Requested units - if we have them here it means none of
+               -- the subsystems that were supposed to contain them actually
+               -- do, or the entire subsystem could not be aquired.
+               --
+               -- We still want to compute the dependency maps so that we can
+               -- give the user a picture of where the missing units were being
+               -- withed from (similarily for subystems).
+               --
+               -- For those units, we need to add an empty set to the forward
+               -- dependency map so that we don't need to check for No_Element
+               -- cursors everywhere else. This makes particular sense
+               -- considering this work order is single issue (not parallel),
+               -- so there will be no contention on the dependency maps
+               -- anyways.
                
-               pragma Assert (Inserted);
-            end;
+               declare
+                  Inserted: Boolean;
+               begin
+                  Registry.Unit_Forward_Dependencies.Insert
+                    (Key      => Unit.Name, 
+                     New_Item => Unit_Names.Sets.Empty_Set,
+                     Inserted => Inserted);
+                  
+                  pragma Assert (Inserted);
+               end;
+               
+               -- Subunits can't be requested! Every time a dependency request
+               -- is processed by the registrar, it is entered as a library
+               -- unit. I.e. a subsystem unit can only get into the registry by
+               -- being entered, and therefore can't have a state of Requested.
+               pragma Assert (Unit.Kind /= Subunit);
+               
+            end if;
             
-            -- Subunits can't be requested! Every time a dependency request
-            -- is processed by the registrar, it is entered as a library unit.
-            -- I.e. a subsystem unit can only get into the registry by being
-            -- entered, and therefore can't have a state of Requested.
-            pragma Assert (Unit.Kind /= Subunit);
             
-         end if;
+            if Unit.Kind = Subunit then 
+               -- Merge Subunit forward dependencies up to the fist non-subunit
+               -- parent. If this subunit is orphaned (no non-subunit parent),
+               -- Trace_Subunit_Parent will raise a specific exception
+               -- identifying the orphaned subunit.
+               
+               -- Take the forward dependency set from the subunit
+               Registry.Unit_Forward_Dependencies.Modify 
+                 (Key     => Unit.Name,
+                  Process => Set_Extraction'Access);
+               
+               -- And migrate to its parent. This will keep happening until
+               -- it reaches a unit that is not a subunit
+               Registry.Unit_Forward_Dependencies.Modify
+                 (Key     => Registrar.Queries.Trace_Subunit_Parent(Unit).Name,
+                  Process => Merge_Extraction'Access);
+            else
+               -- A normal unit, which actually needs to be processesed. We
+               -- want each dependency of this unit to have this unit
+               -- registered as a reverse dependency for that dependent unit
+               -- (this is what the Fan_Out order accomplishes).
+               
+               Fan_Out.Unit_Map_Queues.Insert 
+                 (Reverse_Dependency_Queue'
+                    (Map_Key    => Unit.Name,
+                     Name_Queue => new Name_Queues.Queue));
+            end if;
+            
+            Merge_Subunits_Progress.Increment_Completed_Items;
+         end loop;
          
-         
-         if Unit.Kind = Subunit then 
-            -- Merge Subunit forward dependencies up to the fist non-subunit
-            -- parent
-            
-            -- Take the forward dependency set from the subunit
-            Registry.Unit_Forward_Dependencies.Modify 
-              (Key     => Unit.Name,
-               Process => Set_Extraction'Access);
-            
-            -- And migrate to its parent. This will keep happening until
-            -- it reaches a unit that is not a subunit
-            Registry.Unit_Forward_Dependencies.Modify
-              (Key     => Registrar.Queries.Trace_Subunit_Parent(Unit).Name,
-               Process => Merge_Extraction'Access);
-         else
-            -- A normal unit, which actually needs to be processesed. We want
-            -- each dependency of this unit to have this unit registered as
-            -- a reverse dependency for that dependent unit (this is what
-            -- the Fan_Out order accomplishes).
-            Fan_Out.Unit_Map_Queues.Insert 
-              (Reverse_Dependency_Queue'(Map_Key    => Unit.Name,
-                                         Name_Queue => new Name_Queues.Queue));
-         end if;
-         
-         Merge_Subunits_Progress.Increment_Completed_Items;
-      end loop;
+      exception
+         when others =>
+            Merge_Subunits_Progress.Fail_All_Remaining;
+            raise;
+      end;
       
       -- We set the Fan_Out progress tracker now, before we do the subsystems
       -- so that they are set before we cause the Merge_Subunits tracker to
@@ -320,6 +347,7 @@ package body Registrar.Dependency_Processing is
          Fan_Out.Target := Queue.Map_Key;
          Workers.Enqueue_Order (Fan_Out);
       end loop;
+      
    end Execute;
    
    -------------------

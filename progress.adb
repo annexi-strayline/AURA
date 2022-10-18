@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2019, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2019-2022, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -65,7 +65,7 @@ package body Progress is
       -----------------
       
       function Total_Items return Natural is (Total);
-   
+      
       ---------------------
       -- Set_Total_Items --
       ---------------------
@@ -74,6 +74,13 @@ package body Progress is
       is begin
          Total := Items;
       end Set_Total_Items;
+      
+      ---------------------
+      -- Remaining_Items --
+      ---------------------
+      
+      function Remaining_Items return Natural is
+        (Total - (Completed + Failed));
       
       ---------------------------
       -- Increment_Total_Items --
@@ -187,6 +194,15 @@ package body Progress is
          Increment_Failed_Items;
          Completed := Is_Complete;
       end Increment_Failed_Items;
+   
+      ------------------------
+      -- Fail_All_Remaining --
+      ------------------------
+      
+      procedure Fail_All_Remaining is
+      begin
+         Failed := Failed + Remaining_Items;
+      end Fail_All_Remaining;
    
    end Progress_Tracker;
    

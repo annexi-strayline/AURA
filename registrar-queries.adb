@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2022, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -364,12 +364,28 @@ package body Registrar.Queries is
                                  return Library_Units.Library_Unit
    is
       use Library_Units;
+      
+      Parent_Name: Unit_Names.Unit_Name := Unit.Name.Parent_Name;
+      
+      procedure Name_Check is
+      begin
+         if Parent_Name.Empty then
+            raise Orphaned_Subunit with
+              Unit.Name.To_UTF8_String & " has no library-unit parent.";
+         end if;
+      end;
    begin
-      return Tracer: Library_Unit := Lookup_Unit (Unit.Name.Parent_Name) do
+      -- Preflight check
+      Name_Check;
+      
+      return Tracer: Library_Unit := Lookup_Unit (Parent_Name) do
          while Tracer.Kind = Subunit loop
-            Tracer := Lookup_Unit (Tracer.Name.Parent_Name);
+            Parent_Name := Tracer.Name.Parent_Name;
+            Name_Check;
+            Tracer := Lookup_Unit (Parent_Name);
          end loop;
       end return;
+
    end Trace_Subunit_Parent;
    
    -----------------------

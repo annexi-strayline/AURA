@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2019-2020, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2019-2022, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -55,7 +55,9 @@ package Progress is
    protected type Progress_Tracker is
       
       procedure Reset;
+      
       -- Sets Total, Completed, and Failures to zero
+      
       
       -----------------
       -- Total_Items --
@@ -63,15 +65,25 @@ package Progress is
       
       function Total_Items return Natural;
       
+      
       procedure Set_Total_Items (Items: in Natural);
+      
+      
+      function Remaining_Items return Natural;
+      
       
       procedure Increment_Total_Items;
       
+      
       procedure Increase_Total_Items_By (Items: in Natural);
+      
       -- Adds Item to the current total
       
+      
       entry     Wait_Set;
+      
       -- Waits unil Total_Items > 0
+      
       
       ---------------------
       -- Completed_Items --
@@ -79,21 +91,31 @@ package Progress is
       
       function Completed_Items return Natural;
       
+      
       procedure Set_Completed_Items (Items: in Natural);
+      
       
       procedure Increment_Completed_Items;
       
+      
       procedure Increment_Completed_Items (Completed: out Boolean);
+      
       -- If the incrementation causes the tracker to complete,
       -- Completed is True, otherwise False.
       
+      
       function Percent_Complete return Percent;
       
+      
       function Is_Complete return Boolean;
+      
       -- True if Completed + Failed = Total
       
+      
       entry    Wait_Complete;
+      
       -- Wait until Is_Complete is True
+      
       
       ------------------
       -- Failed_Items --
@@ -101,13 +123,24 @@ package Progress is
       
       function  Failed_Items return Natural;
       
+      
       procedure Set_Failed_Items (Items: in Natural);
+      
       
       procedure Increment_Failed_Items;
       
+      
       procedure Increment_Failed_Items (Completed: out Boolean);
+      
       -- If the incrementation causes the tracker to complete,
       -- Completed is True, otherwise False.
+      
+      
+      procedure Fail_All_Remaining;
+      
+      -- Causes Failed_Items to be set to the sum of Completed_Items and
+      -- Failed_Items, subtracted from Total_Items. Useful when processes need to abort.
+      
       
    private
       

@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2019-2020, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2019-2022, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -112,16 +112,21 @@ package Registrar.Queries is
    -- Library_Unit Queries --
    --------------------------
    
+
+   
    use type Library_Units.Library_Unit_Kind;
    
    function All_Library_Units return Library_Units.Library_Unit_Sets.Set;
+   
    -- Returns the full set of all library units in the registrar
    -- (Both entered and requested)
+   
    
    function Subsystem_Library_Units (SS: Subsystems.Subsystem) 
                                     return Library_Units.Library_Unit_Sets.Set;
    
    -- Returns a set of all Library_Units associated with the given Subsytem
+   
    
    function Requested_Library_Units return Library_Units.Library_Unit_Sets.Set;
    
@@ -130,41 +135,56 @@ package Registrar.Queries is
    -- If Requested_AURA_Subunits returns an empty set, then any units returned
    -- by Requested_Library_Units indicates missing units
    
+   
    function Entered_Library_Units return Library_Units.Library_Unit_Sets.Set;
    
    -- Returns a set of all registered Library Units that are not "Requested"
    -- (Available or Compiled)
+   
    
    function Available_Library_Units return Library_Units.Library_Unit_Sets.Set;
    
    -- Returns a set of all registered Library Units where State = Available,
    -- excluding Ada Subunits (essentially all separately-compilable units)
    
+   
    function Compiled_Library_Units return Library_Units.Library_Unit_Sets.Set;
    
    -- Returns a set of all registered Library Units where State = Compiled
    
+   
    function Ada_Library_Units return Library_Units.Library_Unit_Sets.Set;
+   
    -- Returns a set of all registered Ada library units (Package_Unit or
    -- Subprogram_Unit). Note that subunits are not actually library units
    -- according to Ada, and are not included.
    
+   
    function External_Units return Library_Units.Library_Unit_Sets.Set;
+   
    -- Returns a set of all registered non-Ada (external) units
+   
    
    function Unit_Registered (Name: Unit_Names.Unit_Name) return Boolean;
    
    -- True if a Unit by the name Name has been registered at all
    -- (any state)
    
+   
    function Unit_Entered (Name: Unit_Names.Unit_Name) return Boolean;
+   
    -- True if a Unit by the name Name has been entered (state is not
    -- "Requested")
    
+   
    function Lookup_Unit (Name: Unit_Names.Unit_Name)
                         return Library_Units.Library_Unit
-     with Pre => Unit_Registered (Name);
+   with Pre => Unit_Registered (Name);
+   
    -- Returns a copy of the Library_Unit record pertaining to unit Name.
+   
+   
+   Orphaned_Subunit: exception;
    
    function Trace_Subunit_Parent (Unit: Library_Units.Library_Unit)
                                  return Library_Units.Library_Unit
@@ -173,7 +193,10 @@ package Registrar.Queries is
      Post => Trace_Subunit_Parent'Result.Kind 
              in Library_Units.Package_Unit | Library_Units.Subprogram_Unit;
    
-   -- Returns the Parent Library Unit of a given Subunit
+   -- Returns the Parent Library Unit of a given Subunit. Orphaned subunits
+   -- are explicitly detected, and Orphaned_Subunit is raised with a message
+   -- identifying the full name of the subunit.
+   
    
    function Unit_Dependencies (Name: Unit_Names.Unit_Name)
                               return Unit_Names.Sets.Set
@@ -185,6 +208,7 @@ package Registrar.Queries is
    
    -- Returns a set of names/units for all units on which Name/Unit depends
    -- (Forward dependencies)
+   
    
    function Dependent_Units (Name: Unit_Names.Unit_Name)
                             return Unit_Names.Sets.Set
