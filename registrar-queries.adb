@@ -371,7 +371,9 @@ package body Registrar.Queries is
       begin
          if Parent_Name.Empty then
             raise Orphaned_Subunit with
-              Unit.Name.To_UTF8_String & " has no library-unit parent.";
+              Unit.Name.To_UTF8_String & 
+              " is a nested subunit without a parent," 
+              & " or is a missing parent of a subunit";
          end if;
       end;
    begin
