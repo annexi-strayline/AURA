@@ -592,6 +592,7 @@ package body UI_Primitives is
          Put_Line (" Subsystem  : " & Unit.Name.Subsystem_Name.To_UTF8_String);
          Put_Line (" State      : " & Library_Unit_State'Image (Unit.State));
          Put_Line (" Kind       : " & Library_Unit_Kind'Image (Unit.Kind));
+         Put_Line (" Is_Generic : " & Boolean'Image (Unit.Is_Generic));
          Put_Line (" Have Spec? : " & Boolean'Image (Unit.Spec_File /= null));
          Put_Line (" Have Body? : " & Boolean'Image (Unit.Body_File /= null));
          Put_Line (" Subunits   : " & Count_Type'Image (Unit.Subunit_Bodies.Length));
