@@ -67,14 +67,14 @@ package Registrar.Queries is
    -- An empty set, along with an empty set from Requested_Library_Units
    -- indicates that all dependencies have been satisfied.
    --
-   -- Note. This query also implies AURA = True, since only AURA Subunits can 
+   -- Note. This query also implies AURA = True, since only AURA Subsystems can
    -- be in the "Requested" state.
    
    function Aquired_Subsystems return Subsystems.Subsystem_Sets.Set;
    
    -- Returns a set of all reigstered Subsystems where State = Aquired.
    --
-   -- Note. This query also implies AURA = True since only AURA Subunits can
+   -- Note. This query also implies AURA = True since only AURA Subsystems can
    -- be in the "Aquired" state.
    
    function Available_Subsystems return Subsystems.Subsystem_Sets.Set;
@@ -111,8 +111,6 @@ package Registrar.Queries is
    --------------------------
    -- Library_Unit Queries --
    --------------------------
-   
-
    
    use type Library_Units.Library_Unit_Kind;
    

@@ -58,5 +58,31 @@
 
 package Depreciation_Handlers is
    
+   procedure AURA_Subdirectory (OK_To_Proceed: out Boolean);
+   
+   -- In early betas of AURA, the aura subsystem files were typically stored
+   -- in the project root. This ends up polluting the user's project with
+   -- files that might be better placed in their own subsystem subdirectory.
+   -- This is afterall where all other non-root subsystems normally go.
+   --
+   -- AURA does some special processing of aura subsystem units, particularly
+   -- during genration, and so this is a permanent change (depreciaion).
+   --
+   -- This hander is run as part of the new Scheduling.Enter_Project, which
+   -- replaced (the public) Enter_Root. The new Enter_Project will run this
+   -- handler, and abort or continue as appropriate.
+   --
+   -- First all units in the project root are entered, and then this handler
+   -- is invoked. if the aura subsystem is thereafter registered (indicating
+   -- AURA subsystem files exist in the project root), this handler prompts the
+   -- user to agree to to moving all AURA subsystem units to an aura
+   -- subdirectory.
+   --
+   -- Having AURA subsystem files in root is fully depreciated, and therefore
+   -- if the user rejects moving the AURA subsystem files via the prompt,
+   -- the AURA CLI aborts.
+   --
+   -- If the user rejects, or if an error occurs, OK_To_Proceed is False.
+   
 end Depreciation_Handlers;
 

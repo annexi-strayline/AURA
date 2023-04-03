@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2019-2020, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2019-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -97,6 +97,13 @@ package Registrar.Registration is
    procedure Enter_Root;
    -- Iterates through the root (current) directory, and dispatches to
    -- Enter_Unit for each recognized source file type
+   
+   procedure Enter_All_AURA;
+   -- Iterates through the "aura" subdirectory of the root directory, and
+   -- dispatches to Enter_Unit for each recognized source file type.
+   --
+   -- This behaves similar to Root, as it is not explicitly registered as
+   -- an "aura" subsystem like is requred for Enter_Directory.
    
    use type Ada.Directories.File_Kind;
    

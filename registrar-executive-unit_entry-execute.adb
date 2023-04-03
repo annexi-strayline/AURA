@@ -446,8 +446,9 @@ begin
    end;
    
    
-   -- AURA Subsystems need special treatment, as does the AURA Subsystem
-   -- itself!
+   -- AURA Subsystems (i.e. units of a subsystem, i.e. units not in the project
+   -- root) need special treatment, as does the actual AURA Subsystem itself!
+   
    if New_Unit.Name.Subsystem_Name.To_String = "aura" then
       
       -- AURA subsystems themselves should not have any units of the AURA
@@ -520,7 +521,7 @@ begin
    elsif Order.AURA then
       -- The provided subsystem and the unit's subsystem must match.
       -- Each AURA Subsystem shall only contain that subsystem, and
-      -- the manifest (AURA.Subsystem) only
+      -- the manifest (Subsystem.AURA) only
       
       Assert
         (Check => 

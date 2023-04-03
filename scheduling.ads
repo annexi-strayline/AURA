@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2021, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -109,8 +109,8 @@ package Scheduling is
    --    last-run
    -- 2. Removes the aura-build subdirectory
 
-   procedure Enter_Root;
-   -- Enters all units in the root directory
+   procedure Enter_Project;
+   -- Enters all units in the root directory, as well as the aura subdirectory
    
    procedure Initialize_Repositories;
    

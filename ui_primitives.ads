@@ -109,14 +109,12 @@ package UI_Primitives is
    with Pre => Default'Length = Response'Length;
    -- For use with the User_Queries package
    
-   
    procedure Dump_Reports;
    
    -- Debug
    procedure Dump_Repositories;
    procedure Dump_Subsystems;
    procedure Dump_Library_Units;
---   procedure Dump_Dependency_Map;
    
    -- Normal Operations
    procedure Prep_Tracker (Process_Title: in String;

@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -150,7 +150,9 @@ package Repositories is
    --      implementation
    --    - If it does not exist, it is generated, and then entered to the
    --      Registrar.
-   --      * Note, the package will be inserted into the "Current Directory"
+   --      * Note, the package will be inserted into the 'aura' subdirectory
+   --        of the project root. If this directory does not exist, it is
+   --        created
    --
    -- 3. Checks for all AURA.Respository_X packages, processes them,
    --    and loads them into the internal list
@@ -176,10 +178,10 @@ package Repositories is
    
    -- The following operations are all task-safe
    
-   function Total_Repositories return Repository_Count;
+   function  Total_Repositories return Repository_Count;
    
-   function Extract_Repository (Index: Repository_Index)
-                               return Repository;
+   function  Extract_Repository (Index: Repository_Index)
+                                return Repository;
    
    function  Extract_All return Repository_Vectors.Vector;
    

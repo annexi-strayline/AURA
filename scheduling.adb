@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2021, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -71,6 +71,7 @@ with Registrar.Registration;
 with Registrar.Implementation_Hashing;
 with Registrar.Dependency_Processing;
 with Registrar.Last_Run_Store;
+with Depreciation_Handlers;
 
 package body Scheduling is
    
@@ -160,9 +161,29 @@ package body Scheduling is
       if Exists (Build.Build_Root) then Delete_Tree (Build.Build_Root); end if;
    end Clean;
    
-   ----------------
-   -- Enter_Root --
-   ----------------
+   -------------------
+   -- Enter_Project --
+   -------------------
+   
+   procedure Enter_Root;
+   procedure Enter_All_AURA;
+   
+   procedure Enter_Project is
+      OK_To_Proceed: Boolean := False;
+   begin
+      Enter_Root;
+      Depreciation_Handlers.AURA_Subdirectory (OK_To_Proceed);
+      
+      if OK_To_Proceed then
+         Enter_All_AURA;
+      else
+         raise Constraint_Error with
+           "AURA subsystem units in the project root is depreciated.";
+      end if;
+      
+   end Enter_Project;
+   
+   ----------------------------------------------------------------------
    
    procedure Enter_Root is
       Process_Title: constant String := "Entering root items";
@@ -197,6 +218,34 @@ package body Scheduling is
                                " units)."));
       
    end Enter_Root;
+   
+   ----------------------------------------------------------------------
+   
+   procedure Enter_All_AURA is
+      Process_Title: constant String := "Entering AURA subsystem units";
+      
+      Reg_Tracker: Progress.Progress_Tracker
+        renames Registrar.Registration.Entry_Progress;
+      
+      Entered_Units: Count_Type;
+      
+   begin
+      UI.Prep_Tracker (Process_Title);
+      Registrar.Registration.Enter_All_AURA;
+      UI.Wait_Tracker_Or_Abort (Process_Title => Process_Title,
+                                Tracker       => Reg_Tracker);
+      
+      Entered_Units := Registrar.Queries.Entered_Library_Units.Length;
+
+      Clear_Line;
+      UI.Put_OK_Tag;
+      Put_Line (Message => " Entered" & Count_Type'Image (Entered_Units)
+                  & " AURA subsystem unit"
+                  &        (if Entered_Units = 1 then
+                               "."
+                            else
+                               "s."));
+   end Enter_All_AURA;
    
    -----------------------------
    -- Initialize_Repositories --
@@ -589,9 +638,12 @@ package body Scheduling is
          -- If we have unavailable subsystems, we ignore missing units. Let's
          -- deal with one thing at a time
          UI.Put_Fail_Tag;
-         Put_Line ("Some expected library units are missing.");
+         Put_Line (" Some expected library units are missing.");
          UI.Put_Empty_Tag;
-         Put_Line ("This may indicate subsystem version incompatabilities.");
+         Put_Line (" This may indicate subsystem version incompatabilities, or");
+         UI.Put_Empty_Tag;
+         Put_Line (" incompatabilities with the subsystem configuration (" &
+                     "deactivated codepaths).");
          
          Report_Incomplete_Subsystems (Requested_Units);
          raise Process_Failed;

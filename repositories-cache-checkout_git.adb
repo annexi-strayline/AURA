@@ -349,8 +349,10 @@ package body Checkout_Git is
       end if;
       
       -- Finally we checkout submodules, if any
+      -- TODO: Add a non-zero -j value (git regression), once user
+      -- -j switch is added to AURA CLI
       Git_Command ("submodule --quiet update "
-                     & "--init --checkout --recursive -j 0");
+                     & "--init --checkout --recursive");
       
       Update_Repository (Index   => Order.Index,
                          Updated => Order.Repo);

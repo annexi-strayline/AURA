@@ -85,12 +85,22 @@ procedure Generate_Basic_Config (Target: in out Subsystem) is
    use Ada.Streams.Stream_IO;
    
    Spec_File: File_Type;
-   File_Name: constant String := "aura-" & Target.Name.To_UTF8_String & ".ads";
+   Spec_Directory: constant String := Ada.Directories.Compose
+     (Containing_Directory => Ada.Directories.Current_Directory,
+      Name                 => "aura");
+   File_Base_Name: constant String
+     := "aura-" & Target.Name.To_UTF8_String & ".ads";
+   File_Full_Name: constant String := Ada.Directories.Compose
+     (Containing_Directory => Spec_Directory,
+      Name                 => File_Base_Name);
    
 begin
-   -- It would be a surprise for this file to exist.
+   -- It would be a surprise for this file to exist already.
+   -- Also note that the 'aura' subdirectory should be asserted to exist by
+   -- the repository initialization phase
+   
    Create (File => Spec_File,
-           Name => File_Name);
+           Name => File_Full_Name);
    Generate (Stream (Spec_File));
    Close (Spec_File);
    
@@ -102,8 +112,8 @@ begin
       Conf_Unit: Directory_Entry_Type;
    begin
       Start_Search (Search    => Search,
-                    Directory => Current_Directory,
-                    Pattern   => File_Name);
+                    Directory => Spec_Directory,
+                    Pattern   => File_Base_Name);
       
       Assert (Check   => More_Entries (Search),
               Message => "Error generating configuration unit - cannot find "

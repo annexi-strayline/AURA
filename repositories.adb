@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -209,6 +209,7 @@ package body Repositories is
    procedure Validate_AURA_Spec 
      (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
    is separate;
+   
    -- Verifies the correct format of the AURA package, as well as
    -- checking that the Repository_Format type matches the definition
    -- within this build.
@@ -216,21 +217,28 @@ package body Repositories is
    -- An exception, typically Assertion_Error is raised if this validation
    -- fails.
    
+   
    procedure Generate_AURA_Spec is separate;
-   -- Generates a new AURA spec in the current directory, and then
-   -- submits it to the Registrar
+   
+   -- Generates a new AURA spec in the 'aura' subdirectory of the project root,
+   -- and then submits it to the Registrar.
+   
    
    procedure Parse_Repo_Spec 
      (Stream       : not null access Ada.Streams.Root_Stream_Type'Class;
       Expected_Name: in     Unit_Names.Unit_Name;
       Repo         :    out Repository) 
    is separate;
+   
    -- Validates and extracts the data from a repository Ada spec.
    -- The parsed Repository is not added to All_Repositories to allow
    -- some additional checks in the case of the "default" Root repository
    
+   
    procedure Generate_Repo_Spec (Index: Repository_Index) is separate;
+   
    -- See specification (private part)
+   
    
    procedure Load_Repository 
      (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
@@ -247,6 +255,7 @@ package body Repositories is
    --    Considering points 1 + 2, that overhead would likely nullify any
    --    gains in most cases. If a project has hundreds of repositories,
    --    it might be better for the user to do some house-keeping.
+   
    
    --
    -- Work Orders

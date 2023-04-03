@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -390,12 +390,21 @@ package body Checkout_Orders is
                Order.Target.Source_Repository
                  := Parse_Checkout_Spec (Checkout_Unit);
             end;
-            
+
          else
             -- No spec, use the default Root Repository for now, and
             -- write out
             Order.Target.Source_Repository := Repositories.Root_Repository;
             Write_Checkout_Spec (Order.Target);
+            
+            -- We now need to return for another cycle, where the new checkout
+            -- that was just registered will be fully entered into the
+            -- registrar.
+            --
+            -- It is important to do this, otherwise we will potentially re-
+            -- write the spec and submit a duplicate Entry order for the same
+            -- checkout unit, which will cause AURA to abort.
+            return;
          end if;
       end;
       

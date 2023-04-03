@@ -3,11 +3,11 @@
 --                     Ada User Repository Annex (AURA)                     --
 --                ANNEXI-STRAYLINE Reference Implementation                 --
 --                                                                          --
---                        Command Line Interface                            --
+--                                 Core                                     --
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2023, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -43,23 +43,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- This package contains copies of the All_Subsystems and All_Libraries sets
--- from the previous *successful* execution of AURA, if available.
---
--- If there is no saved infromation, or AURA decides the information is not
--- useful, the sets will be empty.
-
-with Registrar.Subsystems;
-with Registrar.Library_Units;
-
-with Registrar.Last_Run_Store;
-
-package Registrar.Last_Run is
-   
-   All_Subsystems   : Subsystems.Subsystem_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
-   
-   All_Library_Units: Library_Units.Library_Unit_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
-   
-end Registrar.Last_Run;
+procedure Registrar.Registration.Unchecked_Deregister_Subsystem
+  (SS: in out Registrar.Subsystems.Subsystem)
+is
+   use Subsystems;
+begin
+   Registry.All_Subsystems.Delete_Element (SS);
+end;

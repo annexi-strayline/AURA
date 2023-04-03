@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -167,6 +167,28 @@ package body Registrar.Registration is
                                           others         => <>));
    end Enter_Root;
    
+   --------------------
+   -- Enter_All_AURA --
+   --------------------
+   
+   procedure Enter_All_AURA is
+      use Ada.Directories;
+      
+      Expected_Path: constant String := 
+        Compose (Containing_Directory => Full_Name (Current_Directory),
+                 Name                 => "aura");
+   begin
+      if Exists (Expected_Path) then
+         if Kind (Expected_Path) /= Directory then
+            raise Constraint_Error with "A file named 'aura' in the project "
+              & "root must be a directory.";
+         end if;
+         
+         Enter_Directory (Directory_Path => Full_Name (Expected_Path),
+                          Order_Template => (AURA           => False,
+                                             others         => <>));
+      end if;
+   end Enter_All_AURA;
    
    ----------------------------
    -- Request_AURA_Subsystem --

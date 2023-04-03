@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2021, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -84,8 +84,8 @@ package body UI_Primitives is
       Banner: constant Banner_Unit(1 .. 4)
         := (1 => " ,====  == ==  ====.  ,====   Ada User Repository Annex     ",
             2 => ".==|==..==|==..==|==..==|==.  Reference Implementation      ",
-            3 => ":-----::--|--::----.::-----:  Version 0.1                   ",
-            4 => "|__|__||.___,||__|._||__|__|  (C) 2020-2021 ANNEXI-STRAYLINE");
+            3 => ":-----::--|--::----.::-----:  Version 0.2                   ",
+            4 => "|__|__||.___,||__|._||__|__|  (C) 2020-2023 ANNEXI-STRAYLINE");
       
 
       
@@ -428,7 +428,7 @@ package body UI_Primitives is
       Put (' ' & Prompt);
       
       if Auto_Queries then
-         Put (Default);
+         Put_Line (Default);
          Response := Default;
          Last := Default'Last;
 

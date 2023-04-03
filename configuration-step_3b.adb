@@ -215,7 +215,7 @@ begin
       STDOUT, STDERR: Bounded_String;
       Compiler: Child_Process'Class := Spawn_Process
         (Image_Path        => Program_Paths.Image_Path (GNAT_Make),
-         Arguments         => "-I../../../ extract.adb",
+         Arguments         => "-I../../../aura/ extract.adb",
          Working_Directory => Config_Build_Root);
       
       Timed_Out: Boolean;

@@ -147,6 +147,7 @@ package body Registrar.Last_Run_Store is
    --------------------------------------------------
    procedure Store_Current_Run is
       use Ada.Streams.Stream_IO;
+      use type Ada.Containers.Count_Type;
       
       Store: File_Type;
       
@@ -169,16 +170,9 @@ package body Registrar.Last_Run_Store is
       procedure Store_All_Library_Units is new Generic_Store_Last_Run
         (Store_Path => All_Library_Units_Store,
          Sets       => Library_Units.Library_Unit_Sets);
-
+      
+      
    begin
-      
-      -- Clear all subunit bodies, since these are pointless to save,
-      -- and streaming them would waste space and time
-      
-      for Unit of Current_All_Library_Units loop
-         Unit.Subunit_Bodies.Clear;
-      end loop;
-      
       Store_All_Subsystems    (Current_All_Subsystems   );
       Store_All_Library_Units (Current_All_Library_Units);
       

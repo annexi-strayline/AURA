@@ -3,11 +3,11 @@
 --                     Ada User Repository Annex (AURA)                     --
 --                ANNEXI-STRAYLINE Reference Implementation                 --
 --                                                                          --
---                        Command Line Interface                            --
+--                                 Core                                     --
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2023, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -43,23 +43,19 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- This package contains copies of the All_Subsystems and All_Libraries sets
--- from the previous *successful* execution of AURA, if available.
---
--- If there is no saved infromation, or AURA decides the information is not
--- useful, the sets will be empty.
-
+with Registrar.Queries;
 with Registrar.Subsystems;
-with Registrar.Library_Units;
 
-with Registrar.Last_Run_Store;
+procedure Registrar.Registration.Unchecked_Deregister_Subsystem
+  (SS: in out Registrar.Subsystems.Subsystem)
+with Pre => Registrar.Queries.Subsystem_Registered (SS.Name);
 
-package Registrar.Last_Run is
-   
-   All_Subsystems   : Subsystems.Subsystem_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
-   
-   All_Library_Units: Library_Units.Library_Unit_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
-   
-end Registrar.Last_Run;
+-- Unchecked_Deregister_Subsystem removes a subsystem from the All_Subsystems
+-- set.
+--
+-- Currently this procedure is used only by:
+--
+-- * Depreciation_Handlers.AURA_Subdirectory, to de-register the AURA subsystem
+--   if already registered via aura subsystem units in the root directory
+--
+-- Any other uses shall be documented here.

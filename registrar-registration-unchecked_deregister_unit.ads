@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -54,8 +54,17 @@ with Pre => Registrar.Queries.Unit_Entered (Unit.Name);
 -- also deallocates any Spec, Body or Subunit files, which is possibly unsafe
 -- if any copies of the unit record exist outside of the All_Library_Units set.
 --
+-- All associated source files are destroyed. This is done after checking-out
+-- the read stream. This implies potential for a dead-lock if used
+-- inappropriately.
+--
 -- Unchecked_Deregister_Unit does not process any children of the unit, or 
 -- dependencies.
+--
+-- Unchecked_Deregister_Unit preserves the key of the actual parameter, and 
+-- may be used from within Library_Units.Library_Unit_Seys_Keyed_Operations
+--   .Update_Element_Preserving_Key
+--
 --
 -- Currently this procedure is used only by:
 --
@@ -64,5 +73,9 @@ with Pre => Registrar.Queries.Unit_Entered (Unit.Name);
 --
 -- * Registrar.Registration.Exclude_Manifests, to remove all
 --   Configuration Manifests after checkout
+--
+-- * Depreciation_Handlers.AURA_Subdirectory.Process_Changes, to remove all
+--   pre-registered members of the AURA subsystem incorrectly placed in the
+--   project root directory
 --
 -- Any other uses shall be documented here.
