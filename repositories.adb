@@ -206,22 +206,23 @@ package body Repositories is
    -- Generation and Parsing Operations
    --
    
-   procedure Validate_AURA_Spec 
-     (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
+   procedure Check_AURA_Spec 
+     (Stream  : not null access Ada.Streams.Root_Stream_Type'Class;
+      Correct : out Boolean)
    is separate;
    
    -- Verifies the correct format of the AURA package, as well as
    -- checking that the Repository_Format type matches the definition
-   -- within this build.
-   --
-   -- An exception, typically Assertion_Error is raised if this validation
-   -- fails.
+   -- within this build. If the existing spec is valid, Correct is set to
+   -- True. Otherwise, the user is notified of the issue through the
+   -- User_Notices facility, and then Correct is set to False
    
    
-   procedure Generate_AURA_Spec is separate;
+   procedure Generate_AURA_Spec
+     (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
+   is separate;
    
-   -- Generates a new AURA spec in the 'aura' subdirectory of the project root,
-   -- and then submits it to the Registrar.
+   -- Generates a new AURA through the given Stream.
    
    
    procedure Parse_Repo_Spec 
