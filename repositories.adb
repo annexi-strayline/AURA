@@ -44,7 +44,6 @@
 with Ada.Assertions;
 with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Streams;
-with Ada.Directories;
 with Ada.Containers.Ordered_Sets;
 
 with Workers, Workers.Reporting;
@@ -206,57 +205,67 @@ package body Repositories is
    -- Generation and Parsing Operations
    --
    
-   procedure Check_AURA_Spec 
-     (Stream  : not null access Ada.Streams.Root_Stream_Type'Class;
-      Correct : out Boolean)
-   is separate;
-   
-   -- Verifies the correct format of the AURA package, as well as
-   -- checking that the Repository_Format type matches the definition
-   -- within this build. If the existing spec is valid, Correct is set to
-   -- True. Otherwise, the user is notified of the issue through the
-   -- User_Notices facility, and then Correct is set to False
-   
-   
-   procedure Generate_AURA_Spec
-     (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
-   is separate;
-   
-   -- Generates a new AURA through the given Stream.
-   
-   
-   procedure Parse_Repo_Spec 
-     (Stream       : not null access Ada.Streams.Root_Stream_Type'Class;
-      Expected_Name: in     Unit_Names.Unit_Name;
-      Repo         :    out Repository) 
-   is separate;
-   
-   -- Validates and extracts the data from a repository Ada spec.
-   -- The parsed Repository is not added to All_Repositories to allow
-   -- some additional checks in the case of the "default" Root repository
+   package AURA_Spec_Handling is
+      
+      procedure Check_AURA_Spec 
+        (Stream  : not null access Ada.Streams.Root_Stream_Type'Class;
+         Correct : out Boolean);
+      
+      -- Verifies the correct format of the AURA package, as well as
+      -- checking that the Repository_Format type matches the definition
+      -- within this build. If the existing spec is valid, Correct is set to
+      -- True. Otherwise, the user is notified of the issue through the
+      -- User_Notices facility, and then Correct is set to False
+      
+      
+      procedure Generate_AURA_Spec
+        (Stream: not null access Ada.Streams.Root_Stream_Type'Class);
+      
+      -- Generates a new AURA through the given Stream.
+      
+      procedure Register_AURA_Spec;
+      
+      -- Finds and submits the aura specification file, used after invoking
+      -- Generate_AURA_Spec on a newly generated spec
+      
+   end AURA_Spec_Handling;
    
    
-   procedure Generate_Repo_Spec (Index: Repository_Index) is separate;
-   
-   -- See specification (private part)
-   
-   
-   procedure Load_Repository 
-     (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
-      Expected_Index: in Repository_Index);
+   package Repo_Spec_Handling is
+      procedure Parse_Repo_Spec 
+        (Stream       : not null access Ada.Streams.Root_Stream_Type'Class;
+         Expected_Name: in     Unit_Names.Unit_Name;
+         Repo         :    out Repository);
+      
+      -- Validates and extracts the data from a repository Ada spec.
+      -- The parsed Repository is not added to All_Repositories to allow
+      -- some additional checks in the case of the "default" Root repository
+      
+      
+      procedure Generate_Repo_Spec (Index: Repository_Index);
+      
+      -- See specification (private part)
+      
+      procedure Load_Repository 
+        (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
+         Expected_Index: in Repository_Index);
 
-   -- Verifies and loads the specified Repository, and then appends it to
-   -- All_Repositories.
-   --
-   -- This is not done in parallel for a few reasons:
-   -- 1. Normally, one does not expect a large number of repos.
-   -- 2. Repo specs do not take much to parse.
-   -- 3. If done in parallel, the repositories must still be entered to
-   --    All_Repositories sequentially, anyways. This induces overhead.
-   --    Considering points 1 + 2, that overhead would likely nullify any
-   --    gains in most cases. If a project has hundreds of repositories,
-   --    it might be better for the user to do some house-keeping.
+      -- Verifies and loads the specified Repository, and then appends it to
+      -- All_Repositories.
+      --
+      -- This is not done in parallel for a few reasons:
+      -- 1. Normally, one does not expect a large number of repos.
+      -- 2. Repo specs do not take much to parse.
+      -- 3. If done in parallel, the repositories must still be entered to
+      --    All_Repositories sequentially, anyways. This induces overhead.
+      --    Considering points 1 + 2, that overhead would likely nullify any
+      --    gains in most cases. If a project has hundreds of repositories,
+      --    it might be better for the user to do some house-keeping.
+      
+   end Repo_Spec_Handling;
    
+   package body AURA_Spec_Handling is separate;
+   package body Repo_Spec_Handling is separate;
    
    --
    -- Work Orders
@@ -293,8 +302,9 @@ package body Repositories is
       use Unit_Names;
       
       
-      AURA_Unit_Name: Unit_Name := Set_Name ("AURA");
-      AURA_Spec_Unit: Library_Unit;
+      AURA_Unit_Name   : Unit_Name := Set_Name ("AURA");
+      AURA_Spec_Unit   : Library_Unit;
+      AURA_Spec_Correct: Boolean := False;
    begin
       -- Check for the expected root "AURA" package
       
@@ -311,7 +321,8 @@ package body Repositories is
             AURA_Spec_Stream: aliased Source_Stream
               := Checkout_Read_Stream (AURA_Spec_Unit.Spec_File);
          begin
-            Validate_AURA_Spec (AURA_Spec_Stream'Access);
+            Check_AURA_Spec (Stream  => AURA_Spec_Stream'Access,
+                             Correct => AURA_Spec_Correct);
             -- Will raise the appropriately messaged exception if the
             -- validation fails
          end;
