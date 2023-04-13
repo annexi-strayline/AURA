@@ -48,7 +48,7 @@ with Ada.Characters.Conversions;
 with Unicode.Case_Folding.Simple;
 with Ada_Lexical_Parser; use Ada_Lexical_Parser;
 
-separate (Repositories)
+separate (Repositories.Repo_Spec_Handling)
 
 procedure  Parse_Repo_Spec 
   (Stream       : not null access Ada.Streams.Root_Stream_Type'Class;

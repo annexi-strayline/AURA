@@ -49,7 +49,7 @@ with Ada.Characters.Conversions;
 
 with Registrar.Registration;
 
-separate (Repositories)
+separate (Repositories.Repo_Spec_Handling)
 
 procedure Generate_Repo_Spec (Index: Repository_Index) is
 

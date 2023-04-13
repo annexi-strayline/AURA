@@ -244,7 +244,8 @@ package body Repositories is
       
       procedure Generate_Repo_Spec (Index: Repository_Index);
       
-      -- See specification (private part)
+      -- Generates the repo specification for the repository at the given Index,
+      -- and enters the generated unit into the Registry
       
       procedure Load_Repository 
         (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
@@ -444,57 +445,6 @@ package body Repositories is
       end;
       
    end Execute;
-   
-   ---------------------
-   -- Load_Repository --
-   ---------------------
-   
-   procedure Load_Repository 
-     (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
-      Expected_Index: in Repository_Index)
-   is
-      use Registrar.Source_Files;
-      
-      Repo_Spec_Stream: aliased Source_Stream
-        := Checkout_Read_Stream (Repo_Spec.Spec_File);
-      New_Repo : Repository;
-      New_Index: Repository_Index;
-   begin
-      Parse_Repo_Spec (Stream        => Repo_Spec_Stream'Access,
-                       Expected_Name => Expected_Unit_Name (Expected_Index),
-                       Repo          => New_Repo);
-      
-      if New_Repo.Format = System then
-         -- System repositories need to have their cache state to Requested
-         -- This ensures that the repo is scanned every time, so that
-         -- the user can be alerted. This is necessary since System repos
-         -- checkout subsystems via filesystem symlinks.
-         New_Repo.Cache_State := Requested;
-         
-      elsif Expected_Index = Root_Repository then
-         -- The Root Repo needs to be "automatically" checked-out, and
-         -- compared against the expected (hard-coded) representation
-         
-         New_Repo.Cache_State := Available;
-         New_Repo.Cache_Path := New_Repo.Location;
-         
-         Assert (Check   => New_Repo = Root_Repository_Actual,
-                 Message => "The Root Repository (Repostory" 
-                   & Repository_Index'Image (Root_Repository) 
-                   & ") does not contain the correct values. " 
-                   & "Please delete and rerun aura to regenerate.");
-         
-      end if;
-         
-      All_Repositories.Add (New_Repo, New_Index);
-      pragma Assert (New_Index = Expected_Index);
-      Initialize_Repositories_Tracker.Increment_Completed_Items;
-      
-   exception
-      when others =>
-         Initialize_Repositories_Tracker.Increment_Failed_Items;
-      
-   end Load_Repository;
    
    -----------------------------
    -- Initialize_Repositories --
