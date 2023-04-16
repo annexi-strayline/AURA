@@ -178,8 +178,8 @@ package body Registrar.Registration is
         Compose (Containing_Directory => Current_Directory,
                  Name                 => "aura");
    begin
-      pragma Assert (Exists (Expected_Path)
-                       and then Kind (Expected_Path) = Directory);
+      pragma Assert (Exists (AURA_Subsystem_Path)
+                       and then Kind (AURA_Subsystem_Path) = Directory);
       
       -- Ensuring the 'aura' subdirectory exists is the responsibility of
       -- the Scheduling subsystem. This provides more ergonomic error
