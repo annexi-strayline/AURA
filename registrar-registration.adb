@@ -174,20 +174,21 @@ package body Registrar.Registration is
    procedure Enter_All_AURA is
       use Ada.Directories;
       
-      Expected_Path: constant String := 
-        Compose (Containing_Directory => Full_Name (Current_Directory),
+      AURA_Subsystem_Path: constant String := 
+        Compose (Containing_Directory => Current_Directory,
                  Name                 => "aura");
    begin
-      if Exists (Expected_Path) then
-         if Kind (Expected_Path) /= Directory then
-            raise Constraint_Error with "A file named 'aura' in the project "
-              & "root must be a directory.";
-         end if;
-         
-         Enter_Directory (Directory_Path => Full_Name (Expected_Path),
-                          Order_Template => (AURA           => False,
-                                             others         => <>));
-      end if;
+      pragma Assert (Exists (Expected_Path)
+                       and then Kind (Expected_Path) = Directory);
+      
+      -- Ensuring the 'aura' subdirectory exists is the responsibility of
+      -- the Scheduling subsystem. This provides more ergonomic error
+      -- reporting opportunities for the CLI, for what is possibly a common
+      -- error
+      
+      Enter_Directory (Directory_Path => AURA_Subsystem_Path,
+                       Order_Template => (AURA           => False,
+                                          others         => <>));
    end Enter_All_AURA;
    
    ----------------------------

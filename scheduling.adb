@@ -165,12 +165,14 @@ package body Scheduling is
    -- Enter_Project --
    -------------------
    
+   procedure Check_AURA_Dir;
    procedure Enter_Root;
    procedure Enter_All_AURA;
    
    procedure Enter_Project is
       OK_To_Proceed: Boolean := False;
    begin
+      Check_AURA_Dir;
       Enter_Root;
       Depreciation_Handlers.AURA_Subdirectory (OK_To_Proceed);
       
@@ -180,8 +182,34 @@ package body Scheduling is
          raise Constraint_Error with
            "AURA subsystem units in the project root is depreciated.";
       end if;
-      
    end Enter_Project;
+   
+   ----------------------------------------------------------------------
+   
+   procedure Check_AURA_Dir is
+      use Ada.Directories;
+      
+      AURA_Subsystem_Directory: constant String
+        := Compose (Containing_Directory => Current_Directory,
+                    Name                 => "aura");
+   begin
+      -- Ensure that the 'aura' subdirectory exists and is a directory, or else
+      -- create it
+
+      if Exists (AURA_Subsystem_Directory) then
+         if Kind (AURA_Subsystem_Directory) /= Directory then
+            UI.Put_Fail_Tag;
+            Put_Line ("A file named 'aura' in the project "
+                        & "root must be a directory.");
+            UI.Put_Empty_Tag;
+            Put_Line ("(Re)move this file and try again.");
+            raise Process_Failed;
+         end if;
+      else
+         Create_Directory (AURA_Subsystem_Directory);
+      end if;
+      
+   end Check_AURA_Dir;
    
    ----------------------------------------------------------------------
    

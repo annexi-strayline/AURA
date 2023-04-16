@@ -110,7 +110,8 @@ package Scheduling is
    -- 2. Removes the aura-build subdirectory
 
    procedure Enter_Project;
-   -- Enters all units in the root directory, as well as the aura subdirectory
+   -- Enters all units in the root directory, as well as the aura subdirectory,
+   -- creating it if needed
    
    procedure Initialize_Repositories;
    

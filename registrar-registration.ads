@@ -104,6 +104,9 @@ package Registrar.Registration is
    --
    -- This behaves similar to Root, as it is not explicitly registered as
    -- an "aura" subsystem like is requred for Enter_Directory.
+   --
+   -- The 'aura' subdirectory is expected to exist. This is normally handled
+   -- by the Scheduling subsystem.
    
    use type Ada.Directories.File_Kind;
    
