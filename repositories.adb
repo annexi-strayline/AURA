@@ -41,13 +41,15 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Assertions;
-with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Streams;
+with Ada.Assertions;
+with Ada.Directories;
+with Ada.Streams.Stream_IO;
+with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Containers.Ordered_Sets;
 
-with Workers, Workers.Reporting;
 with Unit_Names;
+with Workers.Reporting;
 with Registrar.Source_Files;
 with Registrar.Library_Units;
 with Registrar.Subsystems;
@@ -217,11 +219,20 @@ package body Repositories is
       -- True. Otherwise, the user is notified of the issue through the
       -- User_Notices facility, and then Correct is set to False
       
-      
       procedure Generate_AURA_Spec
         (Stream: not null access Ada.Streams.Root_Stream_Type'Class);
       
       -- Generates a new AURA through the given Stream.
+      
+      procedure Check_Or_Regenerate_AURA_Spec
+        (AURA_Spec_Unit: in Registrar.Library_Units.Library_Unit);
+      
+      -- Executes Check_AURA_Spec on AURA_Main's Spec file, and if found to
+      -- be invalid, executes a User Query, asking permission to regenerate
+      -- the package.
+      --
+      -- This operation expects that AURA_Main is appropriate (has a Spec
+      -- but no body)
       
       procedure Register_AURA_Spec;
       
@@ -280,6 +291,7 @@ package body Repositories is
    -- Ensures the root "aura" package is present and correct, generating if it
    -- necessary
    
+   
    type Sort_Repositories_Order is new Workers.Work_Order with null record;
    
    overriding procedure Execute (Order: in out Sort_Repositories_Order);
@@ -290,6 +302,20 @@ package body Repositories is
    -- Root Repository. All other repositories are dispatched as
    -- Load_Repository_Order's.
    
+   
+   type Load_Repository_Order is new Workers.Work_Order with
+      record
+         Index: Repository_Index;
+         Unit : Registrar.Library_Units.Library_Unit;
+      end record;
+   
+   overriding procedure Execute (Order: in out Load_Repository_Order);
+   overriding function  Image   (Order: Load_Repository_Order) return String;
+                                
+   -- Loads (parses) a given repository spec and enters it into the
+   -- All_Repositories database unit
+   
+   
    --------------------------
    -- Init_AURA_Spec_Order --
    --------------------------
@@ -299,13 +325,13 @@ package body Repositories is
    
    procedure Execute (Order: in out Init_AURA_Spec_Order) is
       use Registrar.Library_Units;
-      use Registrar.Source_Files;
       use Unit_Names;
       
+      use type Registrar.Source_Files.Source_File_Access;
       
       AURA_Unit_Name   : Unit_Name := Set_Name ("AURA");
       AURA_Spec_Unit   : Library_Unit;
-      AURA_Spec_Correct: Boolean := False;
+      
    begin
       -- Check for the expected root "AURA" package
       
@@ -318,18 +344,43 @@ package body Repositories is
          Assert (Check   => AURA_Spec_Unit.Body_File = null,
                  Message => "AURA package shall not have a body.");
          
-         declare
-            AURA_Spec_Stream: aliased Source_Stream
-              := Checkout_Read_Stream (AURA_Spec_Unit.Spec_File);
-         begin
-            Check_AURA_Spec (Stream  => AURA_Spec_Stream'Access,
-                             Correct => AURA_Spec_Correct);
-            -- Will raise the appropriately messaged exception if the
-            -- validation fails
-         end;
-         
+         AURA_Spec_Handling.Check_Or_Regenerate_AURA_Spec (AURA_Spec_Unit);
+
       else
-         Generate_AURA_Spec;
+         declare
+            use Ada.Directories;
+            use Ada.Streams.Stream_IO;
+            
+            AURA_Spec_File: File_Type;
+            
+            AURA_Subsystem_Directory: constant String
+              := Compose (Containing_Directory => Current_Directory,
+                          Name                 => "aura");
+            
+            AURA_Spec_Path: constant String
+              := Compose (Containing_Directory => AURA_Subsystem_Directory,
+                          Name                 => "aura.ads");
+         begin
+            -- We do not expect ./aura/aura.ads to exist, since it is
+            -- not in the registrar. Earlier steps in the process always
+            -- ensure that the 'aura' subdirectory exists in the project
+            -- root
+            
+            Create (File => AURA_Spec_File,
+                    Mode => Out_File,
+                    Name => AURA_Spec_Path);
+            AURA_Spec_Handling.Generate_AURA_Spec (Stream (AURA_Spec_File));
+            Close (AURA_Spec_File);
+            
+         exception
+            when others =>
+               if Is_Open (AURA_Spec_File) then
+                  Close (AURA_Spec_File);
+               end if;
+               raise;
+         end;
+            
+         AURA_Spec_Handling.Register_AURA_Spec;
       end if;
       
       -- If that worked-out, submit an order for the next step - to
@@ -404,7 +455,7 @@ package body Repositories is
             All_Repositories.Add (New_Repo  => Root_Repository_Actual,
                                   New_Index => New_Index);
          
-            Generate_Repo_Spec (New_Index);
+            Repo_Spec_Handling.Generate_Repo_Spec (New_Index);
             return;
          end;
       end if;
@@ -438,13 +489,34 @@ package body Repositories is
          Expected_Index: Repository_Index := Root_Repository;
       begin
          for Unit of Sorted_List loop
-            Load_Repository (Repo_Spec      => Unit,
-                             Expected_Index => Expected_Index);
+            Repo_Spec_Handling.Load_Repository
+              (Repo_Spec => Unit, Expected_Index => Expected_Index);
             Expected_Index := Expected_Index + 1;
          end loop;
       end;
       
    end Execute;
+   
+   
+   ---------------------------
+   -- Load_Repository_Order --
+   ---------------------------
+   
+   function Image (Order: Load_Repository_Order) return String is
+     ("[Load_Repository_Order] Expected Index =" 
+        & Repository_Index'Image (Order.Index)
+        & " (" & Order.Unit.Name.To_UTF8_String & ')');
+   
+   procedure Execute (Order: in out Load_Repository_Order) is
+   begin
+      Repo_Spec_Handling.Load_Repository (Repo_Spec      => Order.Unit,
+                                          Expected_Index => Order.Index);
+   end Execute;
+   
+   
+   --
+   -- Package Implementations
+   --
    
    -----------------------------
    -- Initialize_Repositories --
@@ -463,12 +535,14 @@ package body Repositories is
       
    end Initialize_Repositories;
    
+   
    ------------------------
    -- Total_Repositories --
    ------------------------
    
    function Total_Repositories return Repository_Count
      is (All_Repositories.Total);
+   
    
    ------------------------
    -- Extract_Repository --
@@ -478,12 +552,14 @@ package body Repositories is
                                return Repository
      is (All_Repositories.Extract (Index));
    
+   
    -----------------
    -- Extract_All --
    -----------------
    
    function Extract_All return Repository_Vectors.Vector
      is (All_Repositories.Extract_All);
+   
    
    -----------------
    -- Cache_State --
@@ -497,6 +573,7 @@ package body Repositories is
       return Repo.Cache_State;
    end Cache_State;
    
+   
    --------------------
    -- Add_Repository --
    --------------------
@@ -505,8 +582,9 @@ package body Repositories is
                              New_Index:    out Repository_Index)
    is begin
       All_Repositories.Add (New_Repo, New_Index);
-      Generate_Repo_Spec (New_Index);
+      Repo_Spec_Handling.Generate_Repo_Spec (New_Index);
    end;
+   
    
    -----------------------
    -- Update_Repository --
@@ -516,8 +594,9 @@ package body Repositories is
                                 Updated: in Repository)
    is begin
       All_Repositories.Update (Index, Updated);
-      Generate_Repo_Spec (Index);
+      Repo_Spec_Handling.Generate_Repo_Spec (Index);
    end Update_Repository;
+   
    
    -------------------
    -- Request_Cache --
@@ -528,6 +607,7 @@ package body Repositories is
       All_Repositories.Request_Cache (Index);
    end Request_Cache;
    
+   
    ------------------------
    -- Update_Cache_State --
    ------------------------
@@ -537,5 +617,13 @@ package body Repositories is
    is begin
       All_Repositories.Update_Cache_State (Index, New_State);
    end Update_Cache_State;
+   
+   
+   ------------------------
+   -- Generate_Repo_Spec --
+   ------------------------
+   
+   procedure Generate_Repo_Spec (Index: Repository_Index)
+     renames Repo_Spec_Handling.Generate_Repo_Spec;
    
 end Repositories;

@@ -79,7 +79,7 @@ procedure Check_Platform_Values is
       Next_Element;
       Check (Test   => Category = Delimiter 
                and then Content = ":",
-             Message => "expected "":"" following identifier """
+             Fail_Message => "expected "":"" following identifier """
                & To_String (Name)
                & """");
       
@@ -88,7 +88,7 @@ procedure Check_Platform_Values is
       Next_Element;
       Check (Test   => Category = Reserved_Word 
                and then Content = "constant",
-             Message => """" & To_String (Name)
+             Fail_Message => """" & To_String (Name)
                & """ must be a constant");
       
       if not Correct then return; end if;
@@ -96,7 +96,7 @@ procedure Check_Platform_Values is
       Next_Element;
       Check (Test   => Category = Identifier
                and then Content = "string",
-             Message => """" & To_String (Name)
+             Fail_Message => """" & To_String (Name)
                & """ must be a String");
       
       if not Correct then return; end if;
@@ -104,7 +104,7 @@ procedure Check_Platform_Values is
       Next_Element;
       Check (Test   => Category = Delimiter
                and then Content = ":=",
-             Message => "expected "":="" following ""String"" """
+             Fail_Message => "expected "":="" following ""String"" """
                & To_String (Name)
                & """");
       
@@ -112,10 +112,10 @@ procedure Check_Platform_Values is
       
       Next_Element;
       Check (Test   => Category = String_Literal,
-             Message => "Expected String literal");
+             Fail_Message => "Expected String literal");
       
       Check (Test   => Content = Expected_Value,
-             Message => "Expected value for """ 
+             Fail_Message => "Expected value for """ 
                & To_String (Name) & """ is """
                & To_String (Expected_Value) & """");
       
@@ -124,7 +124,7 @@ procedure Check_Platform_Values is
       Next_Element;
       Check (Test   => Category = Delimiter
                and then Content = ";",
-             Message => "Expressions are not allowed");
+             Fail_Message => "Expressions are not allowed");
    end Verify_Value;
       
 begin
@@ -134,7 +134,7 @@ begin
    while Correct and then not Have_All loop
       Next_Element;
       Check (Test => Category = Identifier,
-             Message => "Unexpected """ 
+             Fail_Message => "Unexpected """ 
                &        To_String (Content)
                &        """ in AURA package");
       

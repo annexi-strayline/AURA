@@ -41,14 +41,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Strings.Wide_Wide_Unbounded;
-with Ada.Strings.Wide_Wide_Unbounded.Wide_Wide_Hash;
-with Ada.Characters.Conversions;
 with Ada.Containers.Hashed_Sets;
+with Ada.Strings.Wide_Wide_Unbounded.Wide_Wide_Hash;
+
 
 separate (Repositories.AURA_Spec_Handling.Check_AURA_Spec)
 
-procedure Check_Repository_Format is
+procedure Check_Repository_Formats is
    
    package WWU renames Ada.Strings.Wide_Wide_Unbounded;
    
@@ -78,27 +77,27 @@ begin
         :=  "AURA package shall contain only the declaration for "
           & "enumeration type Repository_Format";
       
-      procedure Check (Test: in Boolean; 
-                       Fail_Message: in String := Invalid_Declarations)
+      procedure Check_Decl (Test: in Boolean; 
+                            Fail_Message: in String := Invalid_Declarations)
         renames Check;
    begin
       Next_Element;
-      Check (Category = Reserved_Word and then Content = "type");
+      Check_Decl (Category = Reserved_Word and then Content = "type");
       
       if not Correct then return; end if;
       
       Next_Element;
-      Check (Category = Identifier and then Content = "repository_format");
+      Check_Decl (Category = Identifier and then Content = "repository_format");
       
       if not Correct then return; end if;
       
       Next_Element;
-      Check (Category = Reserved_Word and then Content = "is");
+      Check_Decl (Category = Reserved_Word and then Content = "is");
       
       if not Correct then return; end if;
       
       Next_Element;
-      Check (Category = Delimiter and then Content = "(");
+      Check_Decl (Category = Delimiter and then Content = "(");
       
    end;
    
@@ -178,15 +177,15 @@ begin
            (Target => Unsupported_Formats,
             Source => "Unsupported repository formats: ");
          
-         for Format of Literals_Diff loop
+         for Format of Diff loop
             Append (Source   => Unsupported_Formats,
                     New_Item => To_String (To_WWS (Format)));
          end loop;
          
-         Check(Fail, To_String (Unsupported_Formats));
+         Check (False, To_String (Unsupported_Formats));
          -- Some inefficiencies here going via Check, but this is not
          -- really a performance-critical operation.
       end if;
    end;
    
-end Check_Repository_Format;
+end Check_Repository_Formats;

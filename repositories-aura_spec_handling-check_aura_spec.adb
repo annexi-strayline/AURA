@@ -41,29 +41,108 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-separate (Repositories.AURA_Spec_Handling.Check_AURA_Spec)
+with Ada.IO_Exceptions;
+with Ada.Strings.Fixed;
+with Ada.Strings.Bounded;
+with Ada.Strings.Wide_Wide_Unbounded;
+with Ada.Characters.Handling;
+with Ada.Characters.Conversions;
 
-procedure Check_Package_Completion is
+
+with User_Notices;
+with Ada_Lexical_Parser; 
+
+
+separate (Repositories.AURA_Spec_Handling)
+
+procedure Check_AURA_Spec 
+  (Stream  : not null access Ada.Streams.Root_Stream_Type'Class;
+   Correct : out Boolean)
+is
+   use Ada_Lexical_Parser;
+   
+   End_Error: exception renames Ada.IO_Exceptions.End_Error;
+   
+   Source: Source_Buffer (Stream);
+   E: Lexical_Element;
+   
+   function To_String (Item      : in Wide_Wide_String;
+                       Substitute: in Character := ' ')
+                      return String
+     renames Ada.Characters.Conversions.To_String;
+   
+   procedure Next_Element is
+   begin
+      loop
+         E := Next_Element (Source);
+         
+         exit when E.Category /= Comment;
+      end loop;
+   end Next_Element;
+   
+   function Category return Lexical_Category is (E.Category);
+   function Content  return Wide_Wide_String is 
+     (Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (E.Content));
+   
+   
+   Notices: User_Notices.Notice_Lines;
+   
+   procedure Check (Test: in Boolean; Fail_Message: in String) is
+      use Ada.Strings.Unbounded;
+      Position: constant Source_Position := Last_Position (Source);
+      
+      function Trim (Source: in String;
+                     Side  : in Ada.Strings.Trim_End := Ada.Strings.Both)
+                    return String
+        renames Ada.Strings.Fixed.Trim;
+   begin
+      if Test then return; end if;
+      
+      -- We generally expect the common case being for all checks to
+      -- pass. Therefore we can afford to lazily install the notice header
+      
+      if Correct then
+         -- No tests have failed yet
+         Notices.Append
+           (To_Unbounded_String
+              ("AURA specification is currently invalid:"));
+         Correct := False;
+      end if;
+      
+      Notices.Append 
+        (To_Unbounded_String 
+           ('(' 
+              & Trim(Positive'Image(Position.Line)) & ':'
+              & Trim(Positive'Image(Position.Column)) & "): "
+              & Fail_Message));
+   end Check;
+   
+   procedure Check_Package_Declaration is separate;
+   procedure Check_Repository_Formats  is separate;
+   procedure Check_Platform_Values     is separate;
+   procedure Check_Package_Completion  is separate;
+   
+   Checklist: constant array (1 .. 4) of not null access procedure
+     := (1 => Check_Package_Declaration'Access,
+         2 => Check_Repository_Formats'Access,
+         3 => Check_Platform_Values'Access,
+         4 => Check_Package_Completion'Access);
+   
 begin
    
-   Next_Element;
-   Check (Test         => Category = Reserved_Word and then Content = "end",
-          Fail_Message => "AURA package shall only contain the Repository_Format " 
-            & "type declaration, and the Platform information constants.");
+   Correct := True;
+   -- All following checks are assertive.
+
+   for Item of Checklist loop
+      Item.all;
+      exit when not Correct;
+   end loop;
    
-   if not Correct then return; end if;
-   
-   Next_Element;
-   if Category = Identifier then
-      Check (Test         => Content = "aura",
-             Fail_Message => "Package name mismatch - should be AURA");
-   end if;
-   
-   if not Correct then return; end if;
-   
-   Next_Element;
-   Check (Test         => Category = Delimiter and then Content = ";",
-          Fail_Message => "Syntax error at end of package - expected "";"" "
-            & "following ""end""");
-   
-end Check_Package_Completion;
+exception
+   when End_Error =>
+      Check (False, "Unexpected end of file.");
+      
+   when Invalid_Ada =>
+      Check (False, "Parser: Invalid Ada.");
+      
+end Check_AURA_Spec;

@@ -43,15 +43,13 @@
 
 with Ada.Text_IO;
 with Ada.Directories;
-with Ada.IO_Exceptions;
-with Ada.Strings.Fixed;
-with Ada.Strings.Bounded;
+with Ada.Characters.Handling;
 
-with User_Notices;
+with User_Queries;
 with Platform_Info;
 with Registrar.Registration;
 with Unicode.Case_Folding.Simple;
-with Ada_Lexical_Parser; 
+
 
 separate (Repositories)
 
@@ -64,163 +62,44 @@ package body AURA_Spec_Handling is
    procedure Check_AURA_Spec 
      (Stream  : not null access Ada.Streams.Root_Stream_Type'Class;
       Correct : out Boolean)
-   is
-      use Ada_Lexical_Parser;
-      
-      End_Error: exception renames Ada.IO_Exceptions.End_Error;
-      
-      Source: Source_Buffer (Stream);
-      E: Lexical_Element;
-      
-
-      
-      function To_String (Item      : in Wide_Wide_String;
-                          Substitute: in Character := ' ')
-                         return String
-        renames Ada.Characters.Conversions.To_String;
-      
-      procedure Next_Element is
-      begin
-         loop
-            E := Next_Element (Source);
-            
-            exit when E.Category /= Comment;
-         end loop;
-      end Next_Element;
-      
-      function Category return Lexical_Category is (E.Category);
-      function Content  return Wide_Wide_String is (To_WWS (E.Content));
-      
-      
-      Notices: User_Notices.Notice_Lines;
-      
-      procedure Check (Test: in Boolean; Fail_Message: in String) is
-         use Ada.Strings.Unbounded;
-         Position: constant Source_Position := Last_Position (Source);
-         
-         function Trim (Source: in String;
-                        Side  : in Ada.Strings.Trim_End := Ada.Strings.Both)
-                       return String
-           renames Ada.Strings.Fixed.Trim;
-      begin
-         if Test then return; end if;
-         
-         -- We generally expect the common case being for all checks to
-         -- pass. Therefore we can afford to lazily install the notice header
-         
-         if Correct then
-            -- No tests have failed yet
-            Notices.Append
-              (To_Unbounded_String
-                 ("AURA specification is currently invalid:"));
-            Correct := False;
-         end if;
-         
-         Notices.Append 
-           (To_Unbounded_String 
-              ('(' 
-                 & Trim(Positive'Image(Position.Line)) & ':'
-                 & Trim(Positive'Image(Position.Column)) & "): "
-                 & Fail_Message));
-      end Check;
-      
-      procedure Check_Package_Declaration is separate;
-      procedure Check_Repository_Formats  is separate;
-      procedure Check_Platform_Values     is separate;
-      procedure Check_Package_Completion  is separate;
-      
-      Checklist: constant array (1 .. 3) of not null access procedure
-        := (1 => Check_Package_Declaration'Access,
-            2 => Check_Repository_Format'Access,
-            3 => Check_Platform_Values'Access,
-            4 => Check_Package_Completion'Access);
-      
-   begin
-      
-      Correct := True;
-      -- All following checks are assertive.
-
-      for Item of Checklist loop
-         Item;
-         exit when not Correct;
-      end loop;
-      
-   exception
-      when End_Error =>
-         Check (False, "Unexpected end of file.");
-         
-      when Invalid_Ada =>
-         Check (False, "Parser: Invalid Ada.");
-         
-   end Check_AURA_Spec;
+   is separate;
    
    
    ------------------------
    -- Generate_AURA_Spec --
    ------------------------
    
-   procedure Generate_AURA_Spec is
+   procedure Generate_AURA_Spec
+     (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
+   is
       use type Ada.Directories.File_Kind;
-      package TIO renames Ada.Text_IO;
-      package FIO is new TIO.Enumeration_IO (Repository_Format);
-      
-      Spec: TIO.File_Type;
-      
-      procedure Put (Item: in String) with Inline is
-      begin
-         TIO.Put (File => Spec, Item => Item);
-      end;
-      
       
       procedure Put (Item: in Repository_Format) with Inline is
       begin
-         FIO.Put (File => Spec,
-                  Item => Item,
-                  Set  => TIO.Lower_Case);
+         String'Write 
+           (Stream, 
+            Ada.Characters.Handling.To_Lower
+              (Repository_Format'Image (Item)));
+      end;
+      
+      procedure Put (Item: in String) with Inline is
+      begin
+         String'Write (Stream, Item);
       end;
       
       procedure Put_Line (Item: in String) with Inline is
       begin
-         TIO.Put_Line (File => Spec, Item => Item);
+         String'Write (Stream, Item & New_Line);
       end;
       
-      procedure New_Line (File   : in TIO.File_Type := Spec;
-                          Spacing: in TIO.Positive_Count := 1)
-        renames TIO.New_Line;
-      
-      -- We cannot use TIO.Set_Output since this is a very multi-tasking program,
-      -- and the CLI driver will inject random stuff into the spec if we try.
-      -- I know because I tried.
-      
+      procedure New_Line with Inline is
+      begin
+         Character'Write (Stream, Repositories.New_Line);
+      end;
+
       Tab: constant String := (1 .. 4 => ' ');
       
-      Spec_Directory: constant String := Ada.Directories.Compose
-        (Containing_Directory => Ada.Directories.Current_Directory,
-         Name                 => "aura");
-      
-      Spec_File_Name: constant String := Ada.Directories.Compose
-        (Containing_Directory => Spec_Directory,
-         Name                 => "aura.ads");
-      
    begin
-      
-      if not Ada.Directories.Exists (Spec_Directory) then
-         Ada.Directories.Create_directory (Spec_Directory);
-         
-      else
-         Assert (Check => Ada.Directories.Kind (Spec_Directory)
-                   = Ada.Directories.Directory,
-                 Message => "The 'aura' name of an aura project should be a "
-                   &        "directory.");
-      end if;
-      
-      -- Given that the directory exists, we expect that there is no "aura.ads"
-      -- there since this should have been entered into the repo, and if it has
-      -- been, this procedure should never get called.
-      
-      TIO.Create (File => Spec,
-                  Name => Spec_File_Name);
-      
       Put_Line 
         ("-- This specification was automatically generated by the AURA CLI");
       
@@ -249,10 +128,9 @@ package body AURA_Spec_Handling is
       declare
          package PI renames Platform_Info;
          
-         procedure CS (Name, Value: in String) is
+         procedure CS (Name, Value: in String) with Inline is
          begin
-            Put (Tab & Name & ": constant String := """ & Value & """;");
-            New_Line;
+            Put_Line (Tab & Name & ": constant String := """ & Value & """;");
          end CS;
       begin
          CS (Name => "Platform_Family",       Value => PI.Platform_Family);
@@ -262,10 +140,84 @@ package body AURA_Spec_Handling is
       end;
       
       New_Line;
-      Put ("end AURA;");
-      
-      TIO.Close (Spec);
+      Put_Line ("end AURA;");
    end Generate_AURA_Spec;
+   
+   
+   -----------------------------------
+   -- Check_Or_Regenerate_AURA_Spec --
+   -----------------------------------
+   
+   procedure Check_Or_Regenerate_AURA_Spec
+     (AURA_Spec_Unit: in Registrar.Library_Units.Library_Unit)
+   is
+      use Registrar.Source_Files;
+      
+      AURA_Spec_Correct: Boolean := False;
+      Go_For_Regen     : Boolean := False;
+   begin
+      
+      declare
+         AURA_Spec_Stream: aliased Source_Stream
+           := Checkout_Read_Stream (AURA_Spec_Unit.Spec_File);
+      begin
+         Check_AURA_Spec (Stream  => AURA_Spec_Stream'Access,
+                          Correct => AURA_Spec_Correct);
+      end;
+      
+      if not AURA_Spec_Correct then
+         declare
+            use User_Queries;
+            Query_Response: String (1 .. 1);
+            Last: Natural;
+         begin
+            loop
+               Query_Manager.Start_Query;
+               -- Note that validation info messages should be output
+               -- before this query, so the user will have some context
+               Query_Manager.Post_Query
+                 (Prompt => " AURA root specification is not currently valid, "
+                    & "regenerate? (y/n)",
+                  Default       => "y",
+                  Response_Size => 1);
+               
+               Query_Manager.Wait_Response (Response => Query_Response,
+                                            Last     => Last);
+               
+               Query_Manager.End_Query;
+               
+               if Last = 1 then
+                  if Query_Response in "Y" | "y" then
+                     Go_For_Regen := True;
+                     exit;
+                     
+                  elsif Query_Response in "N" | "n" then
+                     Assert (True, "AURA root specification is not valid. "
+                               & "Delete and re-run to auto-generate. "
+                               & "or answer 'y' to the query. Aborting.");
+                  end if;
+               end if;
+            end loop;
+         exception
+            when others =>
+               if Query_Manager.Query_Active then
+                  Query_Manager.End_Query;
+               end if;
+               raise;
+         end;
+      end if;
+      
+      if Go_For_Regen then
+         declare
+            AURA_Rewrite: aliased Source_Stream
+              := Checkout_Write_Stream (Source  => AURA_Spec_Unit.Spec_File,
+                                        Rewrite => True);
+         begin
+            Generate_AURA_Spec (AURA_Rewrite'Access);
+         end;
+      end if;
+      
+   end Check_Or_Regenerate_AURA_Spec;
    
    
    ------------------------
@@ -274,6 +226,10 @@ package body AURA_Spec_Handling is
    
    procedure Register_AURA_Spec is
       use Ada.Directories;
+      
+      Spec_Directory: constant String := Compose
+        (Containing_Directory => Current_Directory,
+         Name                 => "aura");
       
       Search: Search_Type;
       Spec  : Directory_Entry_Type;
