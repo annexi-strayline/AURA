@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -67,14 +67,14 @@ package User_Queries is
       
       procedure End_Query;
       -- Completes a query, allowing other pending queries to start, if
-      -- any.
+      -- any. Can be expected not to raise an exception.
       
       procedure Post_Query (Prompt       : in String;
                             Default      : in String;
                             Response_Size: in Positive)
       with Pre => Default'Length = Response_Size;
       -- Raises Program_Error if a query is not active, or a query is still
-      -- pending
+      -- pending. Response_Size is the maximum size of the response.
       
       entry Wait_Response (Response: out String;
                            Last    : out Natural);
