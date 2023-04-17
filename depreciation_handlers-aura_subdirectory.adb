@@ -131,7 +131,7 @@ begin
       end select;
       
       User_Queries.Query_Manager.Post_Query
-        (Prompt        => "Move all aura subsystems sources to 'aura'? [y/n]",
+        (Prompt        => "Move all aura subsystems sources to 'aura'? (y/n)",
          Default       => "y",
          Response_Size => 1);
       
