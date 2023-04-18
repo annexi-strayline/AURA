@@ -127,7 +127,6 @@ is
          2 => Check_Repository_Formats'Access,
          3 => Check_Platform_Values'Access,
          4 => Check_Package_Completion'Access);
-   
 begin
    
    Correct := True;
@@ -137,6 +136,10 @@ begin
       Item.all;
       exit when not Correct;
    end loop;
+   
+   if not Correct then
+      User_Notices.Post_Notice (Notices);
+   end if;
    
 exception
    when End_Error =>

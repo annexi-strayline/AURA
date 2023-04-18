@@ -752,6 +752,28 @@ package body UI_Primitives is
          Update (Spin);
       end Term_Update;
       
+      procedure Post_Notices is
+          use User_Notices;
+      begin
+         while User_Notices.Available_Notices > 0 loop
+            declare
+               Notice: constant Notice_Lines := Retrieve_Notice;
+            begin
+               Clear_Line;
+               Put_Info_Tag;
+               Put (' ');
+               for Line of Notice loop
+                  Put_Line (UBS.To_String (Line));
+                  Put_Empty_Tag;
+                  Put (' ');
+               end loop;
+            end;
+            
+            Clear_Line;
+            Prep_Output;
+         end loop;
+      end Post_Notices;
+      
    begin
       Failures := False;
       Timedout := False;
@@ -785,30 +807,15 @@ package body UI_Primitives is
                end select;
             end if;
             
-            while User_Notices.Available_Notices > 0 loop
-               declare
-                  use User_Notices;
-                  Notice: constant Notice_Lines := Retrieve_Notice;
-               begin
-                  Clear_Line;
-                  Put_Info_Tag;
-                  Put (' ');
-                  for Line of Notice loop
-                     Put_Line (UBS.To_String (Line));
-                     Put ("       ");
-                  end loop;
-               end;
-               
-               Clear_Line;
-               Prep_Output;
-            end loop;
+            Post_Notices;
             
             if User_Queries.Query_Manager.Query_Pending then
-               Clear_Line;
                User_Queries.Query_Manager.Take_Query (Query_Driver'Access);
                Prep_Output;
             end if;
          end loop;
+         
+         Post_Notices;
          
       else
          select
@@ -834,6 +841,8 @@ package body UI_Primitives is
          
          Put (Natural'Image (Completed_Items));
          
+         Post_Notices;
+         
          if Failures then
             Put (" (+" & Trim (Natural'Image (Failed_Items)) & " Failed)");
          end if;
@@ -841,7 +850,6 @@ package body UI_Primitives is
          Put_Line (" of" 
                      & Natural'Image (Total_Items) 
                      & " work orders completed.");
-         
       end if;
       
       

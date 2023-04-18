@@ -192,7 +192,7 @@ package body AURA_Spec_Handling is
                      exit;
                      
                   elsif Query_Response in "N" | "n" then
-                     Assert (True, "AURA root specification is not valid. "
+                     Assert (False, "AURA root specification is not valid. "
                                & "Delete and re-run to auto-generate. "
                                & "or answer 'y' to the query. Aborting.");
                   end if;
