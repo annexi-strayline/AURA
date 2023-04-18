@@ -164,27 +164,36 @@ begin
       use UBS;
       use Identifier_Sets;
       
-      Diff: Identifier_Sets.Set := Difference 
+      Unexpected_Literals: constant Identifier_Sets.Set := Difference 
         (Encountered_Literals, Expected_Literals);
       
-      Unsupported_Formats: Unbounded_String
-        := To_Unbounded_String ("Unsupported repository formats: ");
-   begin
-      if Difference (Encountered_Literals, 
-                     Expected_Literals    ).Length > 0
-      then
-         Set_Unbounded_String 
-           (Target => Unsupported_Formats,
-            Source => "Unsupported repository formats: ");
-         
-         for Format of Diff loop
-            Append (Source   => Unsupported_Formats,
-                    New_Item => To_String (To_WWS (Format)));
+      Missing_Literals: constant Identifier_Sets.Set := Difference
+        (Expected_Literals, Encountered_Literals);
+      
+      Error_Message: Unbounded_String;
+      
+      procedure Append_Identifiers (Identifiers: in Identifier_Sets.Set) is
+      begin
+         for Format of Identifiers loop
+            Append (Source   => Error_Message,
+                    New_Item => ' ' & To_String (To_WWS (Format)));
          end loop;
-         
-         Check (False, To_String (Unsupported_Formats));
-         -- Some inefficiencies here going via Check, but this is not
-         -- really a performance-critical operation.
+      end;
+   begin
+      if Unexpected_Literals.Length > 0 then
+         Set_Unbounded_String 
+           (Target => Error_Message,
+            Source => "Unsupported repository formats:");
+         Append_Identifiers (Unexpected_Literals);
+         Check (False, To_String (Error_Message));
+      end if;
+      
+      if Missing_Literals.Length > 0 then
+         Set_Unbounded_String 
+           (Target => Error_Message,
+            Source => "Missing expected repository formats:");
+         Append_Identifiers (Missing_Literals);
+         Check (False, To_String (Error_Message));
       end if;
    end;
    
