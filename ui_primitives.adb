@@ -428,10 +428,21 @@ package body UI_Primitives is
       Put (' ' & Prompt);
       
       if Auto_Queries then
-         Put_Line (Default);
+         Put_Line (Default & " [AUTO-ANSWER DEFAULT]");
          Response := Default;
          Last := Default'Last;
-
+         
+      elsif not CLI.Output_Is_Terminal then
+         New_Line;
+         Put_Fail_Tag;
+         Put_Line (" Query response required while running headless.");
+         Put_Empty_Tag;
+         Put_Line (" Re-run on a terminal, or else give the '-y' option to "
+                     & "select the default option for all queries.");
+         Put_Empty_Tag;
+         Put_Line (" Aborting.");
+         raise Scheduling.Process_Failed with
+           "No one to answer the Query.";
       else
          Get_Line (Item => Response,
                    Last => Last);
@@ -706,11 +717,13 @@ package body UI_Primitives is
       
       procedure Prep_Output is
       begin
-         Internal_Prep_Tracker (Process_Title, Bar, Spinner_Only);
-         Put (' ');
-         Render (Spin);
-         Put (' ');
-         After_Bar := Current_Column;
+         if Is_Term then
+            Internal_Prep_Tracker (Process_Title, Bar, Spinner_Only);
+            Put (' ');
+            Render (Spin);
+            Put (' ');
+            After_Bar := Current_Column;
+         end if;
       end Prep_Output;
       
       procedure Term_Update is
@@ -759,7 +772,11 @@ package body UI_Primitives is
             declare
                Notice: constant Notice_Lines := Retrieve_Notice;
             begin
-               Clear_Line;
+               if Is_Term then
+                  Clear_Line;
+               else
+                  New_Line;
+               end if;
                Put_Info_Tag;
                Put (' ');
                for Line of Notice loop
@@ -818,12 +835,28 @@ package body UI_Primitives is
          Post_Notices;
          
       else
-         select
-            Tracker.Wait_Complete;
-         or
-            delay Process_Timeout;
-            Timedout := True;
-         end select;
+         
+         loop
+            select
+               Tracker.Wait_Complete;
+               exit;
+            or
+               delay Progress_Poll_Rate;
+            end select;
+            
+            Post_Notices;
+            
+            if Ada.Calendar.Clock > Deadline then
+               Timedout := True;
+               exit;
+            
+            elsif User_Queries.Query_Manager.Query_Pending then
+               User_Queries.Query_Manager.Take_Query (Query_Driver'Access);
+               
+            end if;
+         end loop;
+         
+         Post_Notices;
          
          Get_Totals;
          Failures := (Failed_Items > 0);
@@ -841,8 +874,6 @@ package body UI_Primitives is
          
          Put (Natural'Image (Completed_Items));
          
-         Post_Notices;
-         
          if Failures then
             Put (" (+" & Trim (Natural'Image (Failed_Items)) & " Failed)");
          end if;
@@ -851,8 +882,6 @@ package body UI_Primitives is
                      & Natural'Image (Total_Items) 
                      & " work orders completed.");
       end if;
-      
-      
       
    end Wait_Tracker;
    
