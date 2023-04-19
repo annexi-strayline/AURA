@@ -172,11 +172,11 @@ package body Scheduling is
    procedure Enter_Project is
       OK_To_Proceed: Boolean := False;
    begin
-      Check_AURA_Dir;
       Enter_Root;
       Depreciation_Handlers.AURA_Subdirectory (OK_To_Proceed);
       
       if OK_To_Proceed then
+         Check_AURA_Dir;
          Enter_All_AURA;
       else
          raise Constraint_Error with
