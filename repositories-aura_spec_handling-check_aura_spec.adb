@@ -105,7 +105,8 @@ is
          -- No tests have failed yet
          Notices.Append
            (To_Unbounded_String
-              ("AURA specification is currently invalid:"));
+              ("Existing AURA top-level specification does not match this "
+                 & "build of AURA CLI:"));
          Correct := False;
       end if;
       
