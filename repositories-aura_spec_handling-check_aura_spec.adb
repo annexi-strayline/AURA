@@ -48,8 +48,6 @@ with Ada.Strings.Wide_Wide_Unbounded;
 with Ada.Characters.Handling;
 with Ada.Characters.Conversions;
 
-
-with User_Notices;
 with Ada_Lexical_Parser; 
 
 

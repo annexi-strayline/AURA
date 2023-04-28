@@ -49,6 +49,7 @@ with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Containers.Ordered_Sets;
 
 with Unit_Names;
+with User_Notices;
 with Workers.Reporting;
 with Registrar.Source_Files;
 with Registrar.Library_Units;
@@ -422,6 +423,8 @@ package body Repositories is
       Unsorted_List: Library_Unit_Sets.Set
         := Reg_Qs.Subsystem_Library_Units (AURA_SS);
       
+      Repository_1_Regen: Boolean := False;
+      
    begin
       -- We need to collect a list of all repository files (AURA.Repository_X)
       -- registered during the root registration process, and then sort that
@@ -445,29 +448,59 @@ package body Repositories is
          end if;
       end loop;
       
+      
+      -- Special Repository_1 Handling.
+      --
       -- An empty sorted list simply means that there are no repository
       -- specs, and therefore we need to create the Root Repo's spec,
-      -- and call it a day.
-      if Sorted_List.Length = 0 then
+      -- and call it a day. If it is > 0, we ensure that Repo_1 exists,
+      -- and if not it is generated. 
+      
+      if Sorted_List.Length = 0
+        or else Sorted_List(Sorted_List.First).Name
+                  /= Expected_Unit_Name (Root_Repository)
+      then
+         -- Either there are no repositories, or the first repo is not 1.
+         -- Both cases need the default created
+         
+         -- Now we can register it internally directly, and the just generated
+         -- version will be parsed normally on the next run of AURA CLI. This
+         -- avoids all sorts of complexity if we tried to actually enter the
+         -- just-generated verion (specifically the mechanics of registration)
+         --
+         -- Remember that Repo_Spec_HandlingLoad_Repo_Spec already ensures that
+         -- Repository_1 does actually match Root_Repository_Actual.
+         
          declare
             New_Index: Repository_Index;
          begin
             All_Repositories.Add (New_Repo  => Root_Repository_Actual,
                                   New_Index => New_Index);
-         
+            
+            pragma Assert (New_Index = Root_Repository);
+            
             Repo_Spec_Handling.Generate_Repo_Spec (New_Index);
-            return;
+         end;
+      else
+         -- Root Repo spec exists - load it now (to verify correctness), and
+         -- then remove it from the list.
+         declare
+            use Unit_Sorting;
+            Root_Spec: Cursor := Sorted_List.First;
+         begin
+            Initialize_Repositories_Tracker.Increase_Total_Items_By (1);
+            Repo_Spec_Handling.Load_Repository
+              (Repo_Spec      => Sorted_List(Root_Spec),
+               Expected_Index => Root_Repository);
+            Sorted_List.Delete (Root_Spec);
          end;
       end if;
       
-      -- There should never be any gaps in the sorted list. If Repository_1
-      -- (Root repository)
-      -- missing, we'd expect there to be no repository specs at all, and hence
-      -- we dealt with that condition already. If we're here now we shall, at
-      -- the very least have Repository_1.
+      -- There should never be any gaps in the sorted list. Root Repository
+      -- is excluded.
       
       declare
-         I: Repository_Index := Root_Repository;
+         I: Repository_Index := Root_Repository + 1;
       begin
          for Unit of Sorted_List loop
             Assert (Check   => Unit.Name = Expected_Unit_Name (I),
@@ -476,7 +509,6 @@ package body Repositories is
                       &        " ("
                       &        Expected_Unit_Name (I).To_UTF8_String
                       &        ")");
-            
             I := I + 1;
          end loop;
       end;
@@ -486,7 +518,7 @@ package body Repositories is
         (Natural (Sorted_List.Length));
       
       declare
-         Expected_Index: Repository_Index := Root_Repository;
+         Expected_Index: Repository_Index := Root_Repository + 1;
       begin
          for Unit of Sorted_List loop
             Repo_Spec_Handling.Load_Repository

@@ -100,7 +100,8 @@ package body Repo_Spec_Handling is
                  Message => "The Root Repository (Repostory" 
                    & Repository_Index'Image (Root_Repository) 
                    & ") does not contain the correct values. " 
-                   & "Please delete and rerun aura to regenerate.");
+                   & "Please delete Repository_1 and re-run aura "
+                   & "to regenerate.");
          
       end if;
          
@@ -111,6 +112,7 @@ package body Repo_Spec_Handling is
    exception
       when others =>
          Initialize_Repositories_Tracker.Increment_Failed_Items;
+         raise;
       
    end Load_Repository;
    
