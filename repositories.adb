@@ -106,10 +106,13 @@ package body Repositories is
       function  Extract (Index: Repository_Index)
                         return Repository;
       
-      function  Extract_All return Repository_Vectors.Vector;
+      function  Extract_All return Repository_Maps.Map;
       
       procedure Add (New_Repo : in     Repository;
                      New_Index:    out Repository_Index);
+      
+      procedure Insert (New_Repo : in Repository;
+                        New_Index: in Repository_Index);
       
       procedure Update (Index  : in Repository_Index;
                         Updated: in Repository);
@@ -122,7 +125,7 @@ package body Repositories is
       procedure Clear;
       
    private
-      Repo_Vec: Repository_Vectors.Vector;
+      Repo_Map: Repository_Maps.Map;
    end All_Repositories;
    
    
@@ -133,21 +136,31 @@ package body Repositories is
       -----------
       
       function Total return Repository_Count is 
-        (Repository_Count (Repo_Vec.Length));
+        (Repository_Count (Repo_Map.Length));
       
       -------------
       -- Extract --
       -------------
       
-      function Extract (Index: Repository_Index) return Repository is 
-        (Repo_Vec(Index));
+      function Extract (Index: Repository_Index) return Repository is
+        (Repo_Map(Index));
       
       -----------------
       -- Extract_All --
       -----------------
       
-      function Extract_All return Repository_Vectors.Vector is
-        (Repo_Vec);
+      function Extract_All return Repository_Maps.Map is (Repo_Map);
+      
+      ------------
+      -- Insert --
+      ------------
+      
+      procedure Insert (New_Repo : in Repository;
+                        New_Index: in Repository_Index)
+      is begin
+         Repo_Map.Insert (Key      => New_Index,
+                          New_Item => New_Repo);
+      end Insert;
       
       ---------
       -- Add --
@@ -155,9 +168,15 @@ package body Repositories is
       
       procedure Add (New_Repo : in     Repository;
                      New_Index:    out Repository_Index) 
-      is begin
-         Repo_Vec.Append (New_Repo);
-         New_Index := Repository_Index (Repo_Vec.Length);
+      is
+      begin
+         if Repo_Map.Length > 0 then
+            New_Index := Repo_Map.Last_Key + 1;
+         else
+            New_Index := Repository_Index'First;
+         end if;
+         Repo_Map.Insert (Key      => New_Index,
+                          New_Item => New_Repo);
       end Add;
       
       -------------
@@ -167,7 +186,7 @@ package body Repositories is
       procedure Update (Index  : in Repository_Index;
                         Updated: in Repository)
       is begin
-         Repo_Vec (Index) := Updated;
+         Repo_Map (Index) := Updated;
       end Update;
       
       
@@ -178,7 +197,7 @@ package body Repositories is
       procedure Update_Cache_State (Index    : in Repository_Index;
                                     New_State: in Repository_Cache_State)
       is begin
-         Repo_Vec (Index).Cache_State := New_State;
+         Repo_Map (Index).Cache_State := New_State;
       end Update_Cache_State;
       
       -------------------
@@ -187,8 +206,8 @@ package body Repositories is
       
       procedure Request_Cache (Index: in Repository_Index) is
       begin
-         if Repo_Vec (Index).Cache_State = Standby then
-            Repo_Vec (Index).Cache_State := Requested;
+         if Repo_Map (Index).Cache_State = Standby then
+            Repo_Map (Index).Cache_State := Requested;
          end if;
       end Request_Cache;
       
@@ -198,7 +217,7 @@ package body Repositories is
       
       procedure Clear is
       begin
-         Repo_Vec.Clear;
+         Repo_Map.Clear;
       end Clear;
    
    end All_Repositories;
@@ -263,17 +282,11 @@ package body Repositories is
         (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
          Expected_Index: in Repository_Index);
 
-      -- Verifies and loads the specified Repository, and then appends it to
+      -- Verifies and loads the specified Repository, and then inserts it into
       -- All_Repositories.
       --
-      -- This is not done in parallel for a few reasons:
-      -- 1. Normally, one does not expect a large number of repos.
-      -- 2. Repo specs do not take much to parse.
-      -- 3. If done in parallel, the repositories must still be entered to
-      --    All_Repositories sequentially, anyways. This induces overhead.
-      --    Considering points 1 + 2, that overhead would likely nullify any
-      --    gains in most cases. If a project has hundreds of repositories,
-      --    it might be better for the user to do some house-keeping.
+      -- This operation is expected to be run (concurrently) from a worker task.
+      -- See Load_Repository_Order
       
    end Repo_Spec_Handling;
    
@@ -434,16 +447,28 @@ package body Repositories is
       -- Sort (and filter) the unsorted list by adding each
       -- aura.repository_x unit to the set, which will cause them to
       -- be ordered appropriately
+      
+      -- If we find a repository unit that is "Requested", it typically
+      -- indicates that a checkout exists for a repository, but the actual
+      -- repospec is missing or has somehow gone wrong.
+      
       for Unit of Unsorted_List loop
          if Unit.Name.Match_Initial ("aura.repository_") then
+            Assert (Check => Unit.State /= Requested,
+                    Message => "Repository spec "
+                      & ''' & Unit.Name.To_UTF8_String & "' "
+                      & "was expected but not found. "
+                      & "This typically indicates that one or more checkout "
+                      & "specs (in the 'aura' subdirectory) reference the "
+                      & "missing repository.");
             Assert (Check => Unit.Spec_File /= null,
-                    Message => "Repository unit """
+                    Message => "Repository unit '"
                       &        Unit.Name.To_UTF8_String
-                      &        """ has no specification");
+                      &        "' has no specification");
             Assert (Check => Unit.Body_File = null,
-                    Message => "Repository unit """
+                    Message => "Repository unit '"
                       & Unit.Name.To_UTF8_String
-                      & """ shall not have a body");
+                      & "' shall not have a body");
             Sorted_List.Insert (Unit);
          end if;
       end loop;
@@ -471,16 +496,10 @@ package body Repositories is
          -- Remember that Repo_Spec_HandlingLoad_Repo_Spec already ensures that
          -- Repository_1 does actually match Root_Repository_Actual.
          
-         declare
-            New_Index: Repository_Index;
-         begin
-            All_Repositories.Add (New_Repo  => Root_Repository_Actual,
-                                  New_Index => New_Index);
-            
-            pragma Assert (New_Index = Root_Repository);
-            
-            Repo_Spec_Handling.Generate_Repo_Spec (New_Index);
-         end;
+
+         All_Repositories.Insert (New_Repo  => Root_Repository_Actual,
+                                  New_Index => Root_Repository);
+         Repo_Spec_Handling.Generate_Repo_Spec (Root_Repository);
       else
          -- Root Repo spec exists - load it now (to verify correctness), and
          -- then remove it from the list.
@@ -489,9 +508,11 @@ package body Repositories is
             Root_Spec: Cursor := Sorted_List.First;
          begin
             Initialize_Repositories_Tracker.Increase_Total_Items_By (1);
-            Repo_Spec_Handling.Load_Repository
-              (Repo_Spec      => Sorted_List(Root_Spec),
-               Expected_Index => Root_Repository);
+            Workers.Enqueue_Order
+              (Load_Repository_Order'
+                 (Tracker => Initialize_Repositories_Tracker'Access,
+                  Index   => Root_Repository,
+                  Unit    => Sorted_List(Root_Spec)));
             Sorted_List.Delete (Root_Spec);
          end;
       end if;
@@ -504,7 +525,7 @@ package body Repositories is
       begin
          for Unit of Sorted_List loop
             Assert (Check   => Unit.Name = Expected_Unit_Name (I),
-                    Message => "Missing repository unit for "
+                    Message => "Missing expected repository spec for "
                       &        "Repository" & Repository_Index'Image (I)
                       &        " ("
                       &        Expected_Unit_Name (I).To_UTF8_String
@@ -521,12 +542,14 @@ package body Repositories is
          Expected_Index: Repository_Index := Root_Repository + 1;
       begin
          for Unit of Sorted_List loop
-            Repo_Spec_Handling.Load_Repository
-              (Repo_Spec => Unit, Expected_Index => Expected_Index);
+            Workers.Enqueue_Order
+              (Load_Repository_Order'
+                 (Tracker => Initialize_Repositories_Tracker'Access,
+                  Index   => Expected_Index,
+                  Unit    => Unit));
             Expected_Index := Expected_Index + 1;
          end loop;
       end;
-      
    end Execute;
    
    
@@ -585,12 +608,28 @@ package body Repositories is
      is (All_Repositories.Extract (Index));
    
    
-   -----------------
-   -- Extract_All --
-   -----------------
+   ------------------------------
+   -- Extract_All_Repositories --
+   ------------------------------
    
-   function Extract_All return Repository_Vectors.Vector
-     is (All_Repositories.Extract_All);
+   function Extract_All_Repositories return Repository_Maps.Map
+   is
+      use type Ada.Containers.Count_Type;
+   begin
+      return All_Repos: Repository_Maps.Map := All_Repositories.Extract_All do
+         pragma Assert
+           (if All_Repos.Length > 0 then
+               Repository_Index(All_Repos.Length) = All_Repos.Last_Key);
+         -- Correct structure of AURA should ensure  that Extract_All is only
+         -- ever invoked after Initialize_Repositories completes fully.
+         --
+         -- The Initialize_Repositories process is responsible for ensuring 
+         -- that all existing repository specs are valid, and there are no
+         -- holes in the progression of indexes.
+         --
+         -- Ergo if this assertion fails, AURA CLI has a bug.
+      end return;
+   end Extract_All_Repositories;
    
    
    -----------------

@@ -340,13 +340,7 @@ begin
             end if;
             
          elsif Content = "generic" then
-            declare use Source_Pack; begin
-               Assert (Check => Unit_Source_Type = Ada_Spec,
-                       Message => "library-level generic declarations are "
-                         &        "only legal in an Ada specification.");
-            end;
-            
-            -- Next we need to skip the generic formal part of the generic
+            -- We need to skip the generic formal part of the generic
             -- declaration. This might seem overly simplistic, but it should be
             -- correct if you think about it.
             --
@@ -355,23 +349,27 @@ begin
             -- reserved word is if it is a parameter specification of the 
             -- formal part of a parameter profile, and in all cases we will
             -- never see a "generic formal parameter declaration" that does not
-            -- begin- with "use" or "with", therefore we can just skip to the
-            -- next smicolon, and see if we hit the subprogram or package
-            -- specification (reserved word package, function, or procedure).
+            -- begin- with "use" or "with", therefore we can just see if we 
+            -- hit the subprogram or package specification (reserved word
+            -- package, function, or procedure), or else we skip to the next
+            -- semicolon until we do.
             --
             -- This is a great example of how well the Ada syntax is actually
             -- designed.
             
             loop
-               Skip_To_Semicolon;
                Next_Element;
                exit when Category = Reserved_Word
                  and then Content in "package" | "function" | "procedure";
+               Skip_To_Semicolon;
             end loop;
             
             New_Unit.Is_Generic := True;
             Process_Declaration;
             exit;
+            
+            -- Process_Declaration will ensure this is actually a spec not
+            -- a body.
             
          elsif Content in 
            "separate" | "package" | "function" | "procedure" 
@@ -612,7 +610,9 @@ begin
          -- for example, there is an actual child package with the same name
          -- as a subunit - which isn't allowed anyways. (RM 10.1.3-14)
          
-         pragma Assert (Unit_Source_Type = Ada_Body);
+         Assert (Check   => Unit_Source_Type = Ada_Body,
+                 Message => "Subunits shall always be bodies.");
+         
          New_Unit.Subunit_Bodies.Append (Source);
          
       else

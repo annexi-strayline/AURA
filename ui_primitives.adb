@@ -487,10 +487,9 @@ package body UI_Primitives is
    procedure Dump_Repositories is
       use Repositories;
       
-      All_Repos: constant Repository_Vectors.Vector
-        := Extract_All;
+      All_Repos: constant Repository_Maps.Map := Extract_All_Repositories;
       
-      I: Repository_Index := 1;
+      I: Repository_Index := Repository_Index'First;
    begin
       New_Line;
       Put_Line ("Repositories");

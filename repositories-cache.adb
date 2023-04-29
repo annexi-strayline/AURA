@@ -121,25 +121,33 @@ package body Repositories.Cache is
    ------------------------
    
    procedure Cache_Repositories is
-      Repo_Vec: constant Repository_Vectors.Vector := Extract_All;
+      use type Ada.Containers.Count_Type;
+      Repo_Map: Repository_Maps.Map := Extract_All_Repositories;
+      Index: Repository_Index := Root_Repository + 1;
    begin
+      if Repo_Map.Length = 0 then return; end if;
+      
       -- The Root Repository is special, and should never be "cached". In fact,
       -- it always has a cache state of "Available", So let's not waste time
-      -- iterating over it
+      -- iterating over it. We have an ordered map, so we really want to do
+      -- a regular iteration, instead of doing a find every time.
       
-      for I in Root_Repository + 1 .. Repository_Index(Repo_Vec.Length) loop
-         if Repo_Vec(I).Cache_State = Requested then
+      Repo_Map.Delete (Root_Repository);
+      
+      for Repo of Repo_Map loop
+         if Repo.Cache_State = Requested then
             Caching_Progress.Increment_Total_Items;
             
-            case Repo_Vec(I).Format is
+            case Repo.Format is
                when System | Local =>
-                  Validate_Local_Or_System.Dispatch 
-                    (Repo => Repo_Vec(I), Index => I);
+                  Validate_Local_Or_System.Dispatch (Repo, Index);
                   
                when Git =>
-                  Checkout_Git.Dispatch (Repo => Repo_Vec(I), Index => I);
+                  Checkout_Git.Dispatch (Repo, Index);
             end case;
          end if;
+         
+         Index := Index + 1;
       end loop;
       
    end Cache_Repositories;
