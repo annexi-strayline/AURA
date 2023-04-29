@@ -109,6 +109,18 @@ package UI_Primitives is
    with Pre => Default'Length = Response'Length;
    -- For use with the User_Queries package
    
+   procedure Immediate_YN_Query (Prompt  : in     String;
+                                 Default : in     Boolean;
+                                 Response:    out Boolean);
+   
+   -- For use outside of Worker Tasks (such as Scheduling) to initiate an
+   -- immediate Yes/No query via the Query subsystem and the above Query_Driver
+   -- implementation.
+   --
+   -- " (y/n)" will be appended to Prompt.
+   --
+   -- Should not be used if any Worker Tasks are active.
+   
    procedure Dump_Reports;
    
    -- Debug

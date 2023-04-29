@@ -449,6 +449,74 @@ package body UI_Primitives is
       end if;
    end;
    
+   
+   ------------------------
+   -- Immediate_YN_Query --
+   ------------------------
+   
+   procedure Immediate_YN_Query (Prompt  : in     String;
+                                 Default : in     Boolean;
+                                 Response:    out Boolean)
+   is
+      Query_Active: Boolean := False;
+      Query_Response: String (1 .. 1);
+      Last: Natural;
+   begin
+      loop
+         select
+            User_Queries.Query_Manager.Start_Query;
+            Query_Active := True;
+         else
+            raise Program_Error with "Unexpected: user query active";
+         end select;
+         
+         User_Queries.Query_Manager.Post_Query
+           (Prompt        => Prompt & " (y/n)",
+            Default       => (if Default then "y" else "n"),
+            Response_Size => 1);
+         
+         User_Queries.Query_Manager.Take_Query
+           (UI_Primitives.Query_Driver'Access);
+         
+
+         -- Since we are doing this all from a single thread, this should
+         -- never block
+         select
+            User_Queries.Query_Manager.Wait_Response
+              (Response => Query_Response,
+               Last     => Last);
+            User_Queries.Query_Manager.End_Query;
+            Query_Active := False;
+         else
+            raise Program_Error with "Unexpected: query response lost.";
+         end select;
+         
+         if Last = 1 then
+            case Query_Response(1) is
+               when 'y' | 'Y' =>
+                  Response := True;
+                  exit;
+                  
+               when 'n' | 'N' =>
+                  Response := False;
+                  exit;
+                  
+               when others =>
+                  Put_Info_Tag;
+                  Put_Line (" You must answer y or n");
+                  CLI.New_Line;
+            end case;
+         end if;
+      end loop;
+      
+   exception
+      when others =>
+         if Query_Active then
+            User_Queries.Query_Manager.End_Query;
+         end if;
+         raise;
+   end Immediate_YN_Query;
+   
    ------------------
    -- Dump_Reports --
    ------------------

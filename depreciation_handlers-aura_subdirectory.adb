@@ -45,7 +45,6 @@ with Ada.Exceptions;
 
 with CLI;
 with UI_Primitives;
-with User_Queries;
 
 with Unit_Names;
 with Registrar.Subsystems;
@@ -121,75 +120,28 @@ begin
       
    end;
    
-   loop
-      select
-         -- We shouldn't need to do this
-         User_Queries.Query_Manager.Start_Query;
-         Query_Active := True;
-      else
-         raise Program_Error with "Unexpected: user query active";
-      end select;
-      
-      User_Queries.Query_Manager.Post_Query
-        (Prompt        => "Move all aura subsystems sources to 'aura'? (y/n)",
-         Default       => "y",
-         Response_Size => 1);
-      
-      User_Queries.Query_Manager.Take_Query
-        (UI_Primitives.Query_Driver'Access);
-      
-      declare
-         Query_Response: String (1 .. 1);
-         Last: Natural;
-      begin
-         -- Since we are doing this all from a single thread, this should
-         -- never block
-         select
-            User_Queries.Query_Manager.Wait_Response
-              (Response => Query_Response,
-               Last     => Last);
-            User_Queries.Query_Manager.End_Query;
-            Query_Active := False;
-         else
-            raise Program_Error with "Unexpected: query response lost.";
-         end select;
-         
-         if Last = 1 then
-            case Query_Response(1) is
-               when 'y' | 'Y' =>
-                  exit;
-                  
-               when 'n' | 'N' =>
-                  UI_Primitives.Put_Info_Tag;
-                  CLI.Put_Line (" All aura units must be moved to the 'aura' "
-                                  & "subdirectory to continue.");
-                  UI_Primitives.Put_Empty_Tag;
-                  CLI.Put_Line (" AURA CLI will now abort.");
-                  CLI.New_Line;
-                  OK_To_Proceed := False;
-                  return;
-                  
-               when others =>
-                  UI_Primitives.Put_Info_Tag;
-                  CLI.Put_Line (" You must answer y or n");
-                  CLI.New_Line;
-            end case;
-         end if;
-      end;
-   end loop;
+   UI_Primitives.Immediate_YN_Query
+     (Prompt   => "Move all aura subsystems sources to 'aura'?",
+      Default  => True,
+      Response => OK_To_Proceed);
+   
+   if not OK_To_Proceed then
+      UI_Primitives.Put_Info_Tag;
+      CLI.Put_Line (" All aura units must be moved to the 'aura' "
+                      & "subdirectory to continue.");
+      UI_Primitives.Put_Empty_Tag;
+      CLI.Put_Line (" AURA CLI will now abort.");
+      CLI.New_Line;
+      return;
+   end if;
    
    -- We have been given the go-ahead by the user.
    
    Process_Changes;
    -- Process_Changes sets OK_To_Proceed as appropriate
    
-   
 exception
    when e: others =>
-      if Query_Active then
-         User_Queries.Query_Manager.End_Query;
-      end if;
-      
       CLI.New_Line;
       UI_Primitives.Put_Fail_Tag;
       CLI.Put_Line ("Unexpected exception: " 
