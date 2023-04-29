@@ -186,6 +186,24 @@ package body Scheduling is
    
    ----------------------------------------------------------------------
    
+   function Create_AURA_Dir_User_Approval return Boolean is
+      use UI_Primitives;
+      Approved: Boolean;
+   begin
+      Put_Warn_Tag;
+      Put_Line (" The current directory does not appear to be an active "
+                  & "AURA project.");
+      Put_Empty_Tag;
+      Put_Line (" AURA CLI needs to create the 'aura' subdirectory to "
+                  & "initialize the project.");
+      Immediate_YN_Query (Prompt   => "Create 'aura' subdirectory?",
+                          Default  => True,
+                          Response => Approved);
+      return Approved;
+   end Create_AURA_Dir_User_Approval;
+   
+   ----------------------------------------------------------------------
+   
    procedure Check_AURA_Dir is
       use Ada.Directories;
       
@@ -205,10 +223,13 @@ package body Scheduling is
             Put_Line ("(Re)move this file and try again.");
             raise Process_Failed;
          end if;
-      else
+      elsif Create_AURA_Dir_User_Approval then
          Create_Directory (AURA_Subsystem_Directory);
+      else
+         UI.Put_Fail_Tag;
+         Put_Line (" Project initialization aborted by user");
+         raise Process_Failed;
       end if;
-      
    end Check_AURA_Dir;
    
    ----------------------------------------------------------------------
