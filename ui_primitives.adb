@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2021, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -84,8 +84,8 @@ package body UI_Primitives is
       Banner: constant Banner_Unit(1 .. 4)
         := (1 => " ,====  == ==  ====.  ,====   Ada User Repository Annex     ",
             2 => ".==|==..==|==..==|==..==|==.  Reference Implementation      ",
-            3 => ":-----::--|--::----.::-----:  Version 0.1                   ",
-            4 => "|__|__||.___,||__|._||__|__|  (C) 2020-2021 ANNEXI-STRAYLINE");
+            3 => ":-----::--|--::----.::-----:  Version 0.2                   ",
+            4 => "|__|__||.___,||__|._||__|__|  (C) 2020-2023 ANNEXI-STRAYLINE");
       
 
       
@@ -428,15 +428,94 @@ package body UI_Primitives is
       Put (' ' & Prompt);
       
       if Auto_Queries then
-         Put (Default);
+         Put_Line (Default & " [AUTO-ANSWER DEFAULT]");
          Response := Default;
          Last := Default'Last;
-
+         
+      elsif not CLI.Output_Is_Terminal then
+         New_Line;
+         Put_Fail_Tag;
+         Put_Line (" Query response required while running headless.");
+         Put_Empty_Tag;
+         Put_Line (" Re-run on a terminal, or else give the '-y' option to "
+                     & "select the default option for all queries.");
+         Put_Empty_Tag;
+         Put_Line (" Aborting.");
+         raise Scheduling.Process_Failed with
+           "No one to answer the Query.";
       else
          Get_Line (Item => Response,
                    Last => Last);
       end if;
    end;
+   
+   
+   ------------------------
+   -- Immediate_YN_Query --
+   ------------------------
+   
+   procedure Immediate_YN_Query (Prompt  : in     String;
+                                 Default : in     Boolean;
+                                 Response:    out Boolean)
+   is
+      Query_Active: Boolean := False;
+      Query_Response: String (1 .. 1);
+      Last: Natural;
+   begin
+      loop
+         select
+            User_Queries.Query_Manager.Start_Query;
+            Query_Active := True;
+         else
+            raise Program_Error with "Unexpected: user query active";
+         end select;
+         
+         User_Queries.Query_Manager.Post_Query
+           (Prompt        => Prompt & " (y/n)",
+            Default       => (if Default then "y" else "n"),
+            Response_Size => 1);
+         
+         User_Queries.Query_Manager.Take_Query
+           (UI_Primitives.Query_Driver'Access);
+         
+
+         -- Since we are doing this all from a single thread, this should
+         -- never block
+         select
+            User_Queries.Query_Manager.Wait_Response
+              (Response => Query_Response,
+               Last     => Last);
+            User_Queries.Query_Manager.End_Query;
+            Query_Active := False;
+         else
+            raise Program_Error with "Unexpected: query response lost.";
+         end select;
+         
+         if Last = 1 then
+            case Query_Response(1) is
+               when 'y' | 'Y' =>
+                  Response := True;
+                  exit;
+                  
+               when 'n' | 'N' =>
+                  Response := False;
+                  exit;
+                  
+               when others =>
+                  Put_Info_Tag;
+                  Put_Line (" You must answer y or n");
+                  CLI.New_Line;
+            end case;
+         end if;
+      end loop;
+      
+   exception
+      when others =>
+         if Query_Active then
+            User_Queries.Query_Manager.End_Query;
+         end if;
+         raise;
+   end Immediate_YN_Query;
    
    ------------------
    -- Dump_Reports --
@@ -476,10 +555,9 @@ package body UI_Primitives is
    procedure Dump_Repositories is
       use Repositories;
       
-      All_Repos: constant Repository_Vectors.Vector
-        := Extract_All;
+      All_Repos: constant Repository_Maps.Map := Extract_All_Repositories;
       
-      I: Repository_Index := 1;
+      I: Repository_Index := Repository_Index'First;
    begin
       New_Line;
       Put_Line ("Repositories");
@@ -592,6 +670,7 @@ package body UI_Primitives is
          Put_Line (" Subsystem  : " & Unit.Name.Subsystem_Name.To_UTF8_String);
          Put_Line (" State      : " & Library_Unit_State'Image (Unit.State));
          Put_Line (" Kind       : " & Library_Unit_Kind'Image (Unit.Kind));
+         Put_Line (" Is_Generic : " & Boolean'Image (Unit.Is_Generic));
          Put_Line (" Have Spec? : " & Boolean'Image (Unit.Spec_File /= null));
          Put_Line (" Have Body? : " & Boolean'Image (Unit.Body_File /= null));
          Put_Line (" Subunits   : " & Count_Type'Image (Unit.Subunit_Bodies.Length));
@@ -705,11 +784,13 @@ package body UI_Primitives is
       
       procedure Prep_Output is
       begin
-         Internal_Prep_Tracker (Process_Title, Bar, Spinner_Only);
-         Put (' ');
-         Render (Spin);
-         Put (' ');
-         After_Bar := Current_Column;
+         if Is_Term then
+            Internal_Prep_Tracker (Process_Title, Bar, Spinner_Only);
+            Put (' ');
+            Render (Spin);
+            Put (' ');
+            After_Bar := Current_Column;
+         end if;
       end Prep_Output;
       
       procedure Term_Update is
@@ -751,6 +832,32 @@ package body UI_Primitives is
          Update (Spin);
       end Term_Update;
       
+      procedure Post_Notices is
+          use User_Notices;
+      begin
+         while User_Notices.Available_Notices > 0 loop
+            declare
+               Notice: constant Notice_Lines := Retrieve_Notice;
+            begin
+               if Is_Term then
+                  Clear_Line;
+               else
+                  New_Line;
+               end if;
+               Put_Info_Tag;
+               Put (' ');
+               for Line of Notice loop
+                  Put_Line (UBS.To_String (Line));
+                  Put_Empty_Tag;
+                  Put (' ');
+               end loop;
+            end;
+            
+            Clear_Line;
+            Prep_Output;
+         end loop;
+      end Post_Notices;
+      
    begin
       Failures := False;
       Timedout := False;
@@ -768,8 +875,6 @@ package body UI_Primitives is
          loop
             Term_Update;
             
-            exit when Tracker.Is_Complete;
-            
             if Ada.Calendar.Clock > Deadline then
                Set_Column (1);
                Put_Fail_Tag;
@@ -784,38 +889,42 @@ package body UI_Primitives is
                end select;
             end if;
             
-            while User_Notices.Available_Notices > 0 loop
-               declare
-                  use User_Notices;
-                  Notice: constant Notice_Lines := Retrieve_Notice;
-               begin
-                  Clear_Line;
-                  Put_Info_Tag;
-                  Put (' ');
-                  for Line of Notice loop
-                     Put_Line (UBS.To_String (Line));
-                     Put ("       ");
-                  end loop;
-               end;
-               
-               Clear_Line;
-               Prep_Output;
-            end loop;
+            Post_Notices;
             
             if User_Queries.Query_Manager.Query_Pending then
-               Clear_Line;
                User_Queries.Query_Manager.Take_Query (Query_Driver'Access);
                Prep_Output;
             end if;
+            
+            exit when Tracker.Is_Complete;
          end loop;
          
+         Term_Update;
+         Post_Notices;
+         
       else
-         select
-            Tracker.Wait_Complete;
-         or
-            delay Process_Timeout;
-            Timedout := True;
-         end select;
+         
+         loop
+            select
+               Tracker.Wait_Complete;
+               exit;
+            or
+               delay Progress_Poll_Rate;
+            end select;
+            
+            Post_Notices;
+            
+            if Ada.Calendar.Clock > Deadline then
+               Timedout := True;
+               exit;
+            
+            elsif User_Queries.Query_Manager.Query_Pending then
+               User_Queries.Query_Manager.Take_Query (Query_Driver'Access);
+               
+            end if;
+         end loop;
+         
+         Post_Notices;
          
          Get_Totals;
          Failures := (Failed_Items > 0);
@@ -840,10 +949,7 @@ package body UI_Primitives is
          Put_Line (" of" 
                      & Natural'Image (Total_Items) 
                      & " work orders completed.");
-         
       end if;
-      
-      
       
    end Wait_Tracker;
    

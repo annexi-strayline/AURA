@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -167,6 +167,29 @@ package body Registrar.Registration is
                                           others         => <>));
    end Enter_Root;
    
+   --------------------
+   -- Enter_All_AURA --
+   --------------------
+   
+   procedure Enter_All_AURA is
+      use Ada.Directories;
+      
+      AURA_Subsystem_Path: constant String := 
+        Compose (Containing_Directory => Current_Directory,
+                 Name                 => "aura");
+   begin
+      pragma Assert (Exists (AURA_Subsystem_Path)
+                       and then Kind (AURA_Subsystem_Path) = Directory);
+      
+      -- Ensuring the 'aura' subdirectory exists is the responsibility of
+      -- the Scheduling subsystem. This provides more ergonomic error
+      -- reporting opportunities for the CLI, for what is possibly a common
+      -- error
+      
+      Enter_Directory (Directory_Path => AURA_Subsystem_Path,
+                       Order_Template => (AURA           => False,
+                                          others         => <>));
+   end Enter_All_AURA;
    
    ----------------------------
    -- Request_AURA_Subsystem --

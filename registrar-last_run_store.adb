@@ -81,6 +81,9 @@ package body Registrar.Last_Run_Store is
          Close (Store);
       end return;
       
+      -- Note that in the case of Source_File_Access types, the Ada stream
+      -- attributes have been specified to ensure these do the right thing
+      
    exception
       when others =>
          return Empty_Set;
@@ -144,6 +147,7 @@ package body Registrar.Last_Run_Store is
    --------------------------------------------------
    procedure Store_Current_Run is
       use Ada.Streams.Stream_IO;
+      use type Ada.Containers.Count_Type;
       
       Store: File_Type;
       
@@ -156,7 +160,7 @@ package body Registrar.Last_Run_Store is
       Current_All_Subsystems: constant Subsystems.Subsystem_Sets.Set
         := Registry.All_Subsystems.Extract_Subset (Select_All'Access);
       
-      Current_All_Library_Units: constant Library_Units.Library_Unit_Sets.Set
+      Current_All_Library_Units: Library_Units.Library_Unit_Sets.Set
         := Registry.All_Library_Units.Extract_Subset (Select_All'Access);
       
       procedure Store_All_Subsystems is new Generic_Store_Last_Run
@@ -166,9 +170,9 @@ package body Registrar.Last_Run_Store is
       procedure Store_All_Library_Units is new Generic_Store_Last_Run
         (Store_Path => All_Library_Units_Store,
          Sets       => Library_Units.Library_Unit_Sets);
-
-   begin
       
+      
+   begin
       Store_All_Subsystems    (Current_All_Subsystems   );
       Store_All_Library_Units (Current_All_Library_Units);
       

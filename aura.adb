@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -158,7 +158,7 @@ begin
          return;
          
       when Checkout_Command =>
-         Scheduling.Enter_Root;
+         Scheduling.Enter_Project;
          Scheduling.Add_Explicit_Checkouts;
          Scheduling.Initialize_Repositories;
          Scheduling.Checkout_Cycle;
@@ -169,7 +169,7 @@ begin
          return;
          
       when Compile_Command =>
-         Scheduling.Enter_Root;
+         Scheduling.Enter_Project;
          Scheduling.Initialize_Repositories;
          Scheduling.Checkout_Cycle;
          Scheduling.Consolidate_Dependencies;
@@ -184,7 +184,7 @@ begin
          return;
          
       when Build_Command =>
-         Scheduling.Enter_Root;
+         Scheduling.Enter_Project;
          Scheduling.Initialize_Repositories;
          Scheduling.Checkout_Cycle;
          Scheduling.Consolidate_Dependencies;
@@ -203,7 +203,7 @@ begin
          return;
          
       when Run_Command =>
-         Scheduling.Enter_Root;
+         Scheduling.Enter_Project;
          Scheduling.Initialize_Repositories;
          Scheduling.Checkout_Cycle;
          Scheduling.Consolidate_Dependencies;
@@ -223,7 +223,7 @@ begin
          return; -- Unreachable
          
       when Library_Command =>
-         Scheduling.Enter_Root;
+         Scheduling.Enter_Project;
          Scheduling.Initialize_Repositories;
          Scheduling.Checkout_Cycle;
          Scheduling.Consolidate_Dependencies;
@@ -289,7 +289,7 @@ exception
                      & (if Workers.Reporting.Available_Reports = 1 then
                            "Report "
                         else
-                           "Report")
+                           "Reports")
                      & " to follow:",
                    Style => Bold);
          New_Line;

@@ -1,9 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --                     Ada User Repository Annex (AURA)                     --
---                ANNEXI-STRAYLINE Reference Implementation                 --
---                                                                          --
---                        Command Line Interface                            --
+--                         Reference Implementation                         --
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
@@ -43,23 +41,69 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- This package contains copies of the All_Subsystems and All_Libraries sets
--- from the previous *successful* execution of AURA, if available.
---
--- If there is no saved infromation, or AURA decides the information is not
--- useful, the sets will be empty.
+separate (Repositories)
 
-with Registrar.Subsystems;
-with Registrar.Library_Units;
-
-with Registrar.Last_Run_Store;
-
-package Registrar.Last_Run is
+package body Repo_Spec_Handling is
    
-   All_Subsystems   : Subsystems.Subsystem_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
+   ---------------------
+   -- Parse_Repo_Spec --
+   ---------------------
    
-   All_Library_Units: Library_Units.Library_Unit_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
+   procedure  Parse_Repo_Spec 
+     (Stream       : not null access Ada.Streams.Root_Stream_Type'Class;
+      Expected_Name: in     Unit_Names.Unit_Name;
+      Repo         :    out Repository)
+   is separate;
    
-end Registrar.Last_Run;
+   
+   ------------------------
+   -- Generate_Repo_Spec --
+   ------------------------
+   
+   procedure Generate_Repo_Spec (Index: Repository_Index) is separate;
+   
+   
+   ---------------------
+   -- Load_Repository --
+   ---------------------
+   
+   procedure Load_Repository
+     (Repo_Spec     : in Registrar.Library_Units.Library_Unit;
+      Expected_Index: in Repository_Index)
+   is
+      use Registrar.Source_Files;
+      
+      Repo_Spec_Stream: aliased Source_Stream
+        := Checkout_Read_Stream (Repo_Spec.Spec_File);
+      New_Repo : Repository;
+   begin
+      Parse_Repo_Spec (Stream        => Repo_Spec_Stream'Access,
+                       Expected_Name => Expected_Unit_Name (Expected_Index),
+                       Repo          => New_Repo);
+      
+      if Expected_Index = Root_Repository then
+         -- The Root Repo needs to be "automatically" checked-out, and
+         -- compared against the expected (hard-coded) representation
+         
+         New_Repo.Cache_State := Available;
+         New_Repo.Cache_Path  := New_Repo.Location;
+         
+         Assert (Check   => New_Repo = Root_Repository_Actual,
+                 Message => "The Root Repository (Repostory" 
+                   & Repository_Index'Image (Root_Repository) 
+                   & ") does not contain the correct values. " 
+                   & "Please delete Repository_1 and re-run aura "
+                   & "to regenerate.");
+         
+      elsif New_Repo.Format = System then
+         -- System repositories need to have their cache state to Requested
+         -- This ensures that the repo is scanned every time, so that
+         -- the user can be alerted. This is necessary since System repos
+         -- checkout subsystems via filesystem symlinks.
+         New_Repo.Cache_State := Requested;
+      end if;
+         
+      All_Repositories.Insert (New_Repo, Expected_Index);
+   end Load_Repository;
+   
+end Repo_Spec_Handling;

@@ -189,6 +189,9 @@ procedure Step_2 (Target: in out Subsystem) is
       
    end Find_And_Replace;
    
+   Config_Directory: constant String := Ada.Directories.Compose
+     (Containing_Directory => Ada.Directories.Current_Directory,
+      Name                 => "aura");
    
    procedure Register (Name: in String) is
       use Ada.Directories;
@@ -197,7 +200,7 @@ procedure Step_2 (Target: in out Subsystem) is
       New_Reg: Directory_Entry_Type;
    begin
       Start_Search (Search    => Search,
-                    Directory => Current_Directory,
+                    Directory => Config_Directory,
                     Pattern   => Name);
       
       Assert (Check   => More_Entries (Search),
@@ -219,21 +222,24 @@ begin
       use Ada.Streams.Stream_IO;
       use Registrar.Source_Files;
       
-      Spec_Name: constant String 
+      Spec_Base_Name: constant String 
         := "aura-" & Target.Name.To_UTF8_String & ".ads";
+      Spec_Full_Name: constant String := Ada.Directories.Compose
+        (Containing_Directory => Config_Directory,
+         Name                 => Spec_Base_Name);
       File     : File_Type;
       M_Stream : aliased Source_Stream 
         := Checkout_Read_Stream (Manifest.Spec_File);
    begin
       Create (File => File,
               Mode => Out_File,
-              Name => Spec_Name);
+              Name => Spec_Full_Name);
    
       Find_And_Replace (In_Stream  => M_Stream'Access,
                         Out_Stream => Stream (File));
       
       Close (File);
-      Register (Spec_Name);
+      Register (Spec_Base_Name);
    end;
    
    if Manifest.Body_File /= null then
@@ -242,21 +248,24 @@ begin
          use Ada.Streams.Stream_IO;
          use Registrar.Source_Files;
          
-         Body_Name: constant String 
+         Body_Base_Name: constant String 
            := "aura-" & Target.Name.To_UTF8_String & ".adb";
+         Body_Full_Name: constant String := Ada.Directories.Compose
+           (Containing_Directory => Config_Directory,
+            Name                 => Body_Base_Name);
          File     : File_Type;
          M_Stream : aliased Source_Stream 
            := Checkout_Read_Stream (Manifest.Body_File);
       begin
          Create (File => File,
                  Mode => Out_File,
-                 Name => Body_Name);
+                 Name => Body_Full_Name);
          
          Find_And_Replace (In_Stream  => M_Stream'Access,
                            Out_Stream => Stream (File));
          
          Close (File);
-         Register (Body_Name);
+         Register (Body_Base_Name);
       end;
    end if;
    

@@ -49,7 +49,7 @@ with Ada.Characters.Conversions;
 
 with Registrar.Registration;
 
-separate (Repositories)
+separate (Repositories.Repo_Spec_Handling)
 
 procedure Generate_Repo_Spec (Index: Repository_Index) is
 
@@ -65,20 +65,24 @@ procedure Generate_Repo_Spec (Index: Repository_Index) is
    Trimmed_Index: constant String 
      := Ada.Strings.Fixed.Trim (Source => Repository_Index'Image(Index),
                                 Side   => Ada.Strings.Both);
-   File_Name: constant String
-     := "aura-repository_" & Trimmed_Index & ".ads";
    
+   Spec_Directory: constant String := Ada.Directories.Compose
+     (Containing_Directory => Ada.Directories.Current_Directory,
+      Name                 => "aura");
+   File_Base_Name: constant String
+     := "aura-repository_" & Trimmed_Index & ".ads";
+   File_Full_Name: constant String := Ada.Directories.Compose
+     (Containing_Directory => Spec_Directory,
+      Name                 => File_Base_Name);
    
    Format_Value: constant String
      := Ada.Characters.Handling.To_Lower 
        (Repository_Format'Image (Repo.Format));
    
    
-   generic
-      Stream: not null access Ada.Streams.Root_Stream_Type'Class;
-   procedure Generic_Generator;
-   
-   procedure Generic_Generator is
+   procedure Generate
+     (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
+   is
       procedure New_Line is
       begin
          Character'Write (Stream, Ada.Characters.Latin_1.LF);
@@ -131,7 +135,7 @@ procedure Generate_Repo_Spec (Index: Repository_Index) is
       New_Line;
       Put_Line ("end AURA.Repository_" & Trimmed_Index & ';');
       
-   end Generic_Generator;
+   end Generate;
    
    
    Lookup_Name: Unit_Name;
@@ -152,10 +156,8 @@ begin
          Spec_Source: aliased Source_Stream
            := Checkout_Write_Stream (Source  => Existing_Spec.Spec_File,
                                      Rewrite => True);
-         
-         procedure Generate is new Generic_Generator (Spec_Source'Access);
       begin
-         Generate;
+         Generate (Spec_Source'Access);
       end;
       
    else
@@ -166,16 +168,9 @@ begin
          
          New_Spec: File_Type;
       begin
-         
          Create (File => New_Spec,
-                 Name => File_Name);
-         
-         declare
-            procedure Generate is new Generic_Generator (Stream (New_Spec));
-         begin
-            Generate;
-         end;
-         
+                 Name => File_Full_Name);
+         Generate (Stream (New_Spec));
          Close (New_Spec);
       end;
 
@@ -190,8 +185,8 @@ begin
          Specent: Directory_Entry_Type;
       begin
          Start_Search (Search    => Search,
-                       Directory => Current_Directory,
-                       Pattern   => File_Name);
+                       Directory => Spec_Directory,
+                       Pattern   => File_Base_Name);
          
          Assert (Check   => More_Entries (Search),
                  Message => "Error generating Repository spec - cannot find "

@@ -1,9 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --                     Ada User Repository Annex (AURA)                     --
---                ANNEXI-STRAYLINE Reference Implementation                 --
---                                                                          --
---                        Command Line Interface                            --
+--                         Reference Implementation                         --
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
@@ -43,23 +41,110 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- This package contains copies of the All_Subsystems and All_Libraries sets
--- from the previous *successful* execution of AURA, if available.
---
--- If there is no saved infromation, or AURA decides the information is not
--- useful, the sets will be empty.
+with Ada.IO_Exceptions;
+with Ada.Strings.Fixed;
+with Ada.Strings.Bounded;
+with Ada.Strings.Wide_Wide_Unbounded;
+with Ada.Characters.Handling;
+with Ada.Characters.Conversions;
 
-with Registrar.Subsystems;
-with Registrar.Library_Units;
+with Ada_Lexical_Parser; 
 
-with Registrar.Last_Run_Store;
 
-package Registrar.Last_Run is
+separate (Repositories.AURA_Spec_Handling)
+
+procedure Check_AURA_Spec 
+  (Stream  : not null access Ada.Streams.Root_Stream_Type'Class;
+   Correct : out Boolean)
+is
+   use Ada_Lexical_Parser;
    
-   All_Subsystems   : Subsystems.Subsystem_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
+   End_Error: exception renames Ada.IO_Exceptions.End_Error;
    
-   All_Library_Units: Library_Units.Library_Unit_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
+   Source: Source_Buffer (Stream);
+   E: Lexical_Element;
    
-end Registrar.Last_Run;
+   function To_String (Item      : in Wide_Wide_String;
+                       Substitute: in Character := ' ')
+                      return String
+     renames Ada.Characters.Conversions.To_String;
+   
+   procedure Next_Element is
+   begin
+      loop
+         E := Next_Element (Source);
+         
+         exit when E.Category /= Comment;
+      end loop;
+   end Next_Element;
+   
+   function Category return Lexical_Category is (E.Category);
+   function Content  return Wide_Wide_String is 
+     (Ada.Strings.Wide_Wide_Unbounded.To_Wide_Wide_String (E.Content));
+   
+   
+   Notices: User_Notices.Notice_Lines;
+   
+   procedure Check (Test: in Boolean; Fail_Message: in String) is
+      use Ada.Strings.Unbounded;
+      Position: constant Source_Position := Last_Position (Source);
+      
+      function Trim (Source: in String;
+                     Side  : in Ada.Strings.Trim_End := Ada.Strings.Both)
+                    return String
+        renames Ada.Strings.Fixed.Trim;
+   begin
+      if Test then return; end if;
+      
+      -- We generally expect the common case being for all checks to
+      -- pass. Therefore we can afford to lazily install the notice header
+      
+      if Correct then
+         -- No tests have failed yet
+         Notices.Append
+           (To_Unbounded_String
+              ("Existing AURA top-level specification does not match this "
+                 & "build of AURA CLI:"));
+         Correct := False;
+      end if;
+      
+      Notices.Append 
+        (To_Unbounded_String 
+           ('(' 
+              & Trim(Positive'Image(Position.Line)) & ':'
+              & Trim(Positive'Image(Position.Column)) & "): "
+              & Fail_Message));
+   end Check;
+   
+   procedure Check_Package_Declaration is separate;
+   procedure Check_Repository_Formats  is separate;
+   procedure Check_Platform_Values     is separate;
+   procedure Check_Package_Completion  is separate;
+   
+   Checklist: constant array (1 .. 4) of not null access procedure
+     := (1 => Check_Package_Declaration'Access,
+         2 => Check_Repository_Formats'Access,
+         3 => Check_Platform_Values'Access,
+         4 => Check_Package_Completion'Access);
+begin
+   
+   Correct := True;
+   -- All following checks are assertive.
+
+   for Item of Checklist loop
+      Item.all;
+      exit when not Correct;
+   end loop;
+   
+   if not Correct then
+      User_Notices.Post_Notice (Notices);
+   end if;
+   
+exception
+   when End_Error =>
+      Check (False, "Unexpected end of file.");
+      
+   when Invalid_Ada =>
+      Check (False, "Parser: Invalid Ada.");
+      
+end Check_AURA_Spec;

@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -57,12 +57,12 @@ package Checkout is
    Checkout_Pass_Progress: aliased Progress.Progress_Tracker;
    
    -- Should be called only after:
-   -- * The root directory has been entered to the Registrar,
+   -- * The project has been entered to the Registrar,
    -- * Repositories have been initialized.
    --
    -- This operation interates through all "Requested" AURA Subsystems and
-   -- dispatches to a work order per subsystem that one of the following
-   -- actions, entering all units of the subsystem's root if aquired:
+   -- dispatches to a work order per subsystem that completes one of the
+   -- following actions, entering all units of the subsystem's root if aquired:
    --
    -- * Checkout spec is available, relevent source directory exists:
    --

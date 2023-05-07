@@ -107,7 +107,7 @@ package body Registrar.Executive.Library_Unit_Registration is
                  Message => "Addition of item to an already compiled unit");
          
          -- Note that a new registration never has both a body and a spec
-         -- at the same time, so we can increase efficincy via a bit by
+         -- at the same time, so we can increase efficiency by a bit by
          -- using if + elsif instead of two ifs
          
          pragma Assert (if New_Unit.Spec_File = New_Unit.Body_File then
@@ -209,6 +209,21 @@ package body Registrar.Executive.Library_Unit_Registration is
             Existing_Unit.Body_File := New_Unit.Body_File;
             
          end if;
+         
+         -- In cases where the incoming unit is generic, New_Unit is a Spec,
+         -- and so we can expect everything has been checked up to this point,
+         -- but we should set the flag for the Existing_Unit
+         
+         if New_Unit.Is_Generic then
+            pragma Assert (New_Unit.Kind in Package_Unit | Subprogram_Unit
+                             and New_Unit.Spec_File /= null);
+            
+            -- This should be enforced by the above logic, as well as the
+            -- logic in unit entry
+            
+            Existing_Unit.Is_Generic := True;
+         end if;
+         
          
          Existing_Unit.State := Available;
          

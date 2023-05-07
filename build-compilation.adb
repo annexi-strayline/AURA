@@ -178,9 +178,10 @@ package body Build.Compilation is
 --         Append (Buffer, " -I../");
 --      end if;
       
-      -- Always include the root project path, as this not only contains the
-      -- project sources, but also all of the configuration units
+      -- Always include the project root, but also the aura subdirectory
+      -- since that contains the configuration units
       Append (Buffer, " -I../");
+      Append (Buffer, " -I../aura/");
       
       -- Now the subsystems of all dependencies of this unit, and their
       -- codepaths. Obviously we don't want to needlessly add the same

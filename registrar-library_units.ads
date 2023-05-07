@@ -120,9 +120,15 @@ package Registrar.Library_Units is
    
    type Library_Unit is
       record
-         Name     : Unit_Names.Unit_Name;
-         State    : Library_Unit_State := Requested;
-         Kind     : Library_Unit_Kind  := Unknown;
+         Name      : Unit_Names.Unit_Name;
+         State     : Library_Unit_State := Requested;
+         Kind      : Library_Unit_Kind  := Unknown;
+         
+         Is_Generic: Boolean            := False;
+         -- Is_Generic applies only to Package and Subprogram units, and
+         -- specifically implies a generic library unit. Indeed, unit
+         -- registration checks for illegal presentations, such as a "generic"
+         -- body, or subunit
          
          Spec_File: Source_Files.Source_File_Access := null;
          Body_File: Source_Files.Source_File_Access := null;

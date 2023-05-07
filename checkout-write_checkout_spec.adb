@@ -5,7 +5,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -54,19 +54,25 @@ separate (Checkout)
 procedure Write_Checkout_Spec (SS: in Registrar.Subsystems.Subsystem) is
    
    use Unit_Names;
-   
-   package Registry renames Registrar.Queries;
+   use Registrar.Library_Units;
    use type Repositories.Repository_Index;
-
+   use type Ada.Directories.File_Kind;
+   package Registry renames Registrar.Queries;
    
    Trimmed_Index: constant String 
      := Ada.Strings.Fixed.Trim 
        (Source => Repositories.Repository_Index'Image(SS.Source_Repository),
         Side   => Ada.Strings.Both);
    
-   File_Name: constant String
-           := "aura-" & SS.Name.To_UTF8_String & "-checkout.ads";
-     
+   Spec_Directory_Path: constant String := Ada.Directories.Compose
+     (Containing_Directory => Ada.Directories.Current_Directory,
+      Name                 => "aura");
+   File_Base_Name: constant String
+     := "aura-" & SS.Name.To_UTF8_String & "-checkout.ads";
+   File_Full_Name: constant String := Ada.Directories.Compose
+     (Containing_Directory => Spec_Directory_Path,
+      Name                 => File_Base_Name);
+   
    procedure Generate
      (Stream: not null access Ada.Streams.Root_Stream_Type'Class)
    is
@@ -98,12 +104,12 @@ procedure Write_Checkout_Spec (SS: in Registrar.Subsystems.Subsystem) is
      
    Lookup_Name: Unit_Name;
    
+   
 begin
    Lookup_Name.Set_Name ("AURA." & SS.Name.To_String & ".Checkout");
    
    if Registry.Unit_Entered (Lookup_Name) then
       declare
-         use Registrar.Library_Units;
          use Registrar.Source_Files;
          
          Existing_Spec: constant Library_Unit
@@ -118,6 +124,13 @@ begin
       end;
       
    else
+      
+      -- That the 'aura' subdirectory exists and is a directory is something
+      -- that should be guarunteed by the repository initialization step.`
+      pragma Assert (Ada.Directories.Exists (Spec_Directory_Path)
+                       and then Ada.Directories.Kind (Spec_Directory_Path) 
+                       = Ada.Directories.Directory);
+      
       -- New file
       declare
          use Ada.Streams.Stream_IO;
@@ -126,7 +139,7 @@ begin
       begin
          
          Create (File => New_Spec,
-                 Name => File_Name);
+                 Name => File_Full_Name);
          Generate (Stream (New_Spec));
          Close (New_Spec);
       end;
@@ -142,8 +155,8 @@ begin
          Specent: Directory_Entry_Type;
       begin
          Start_Search (Search    => Search,
-                       Directory => Current_Directory,
-                       Pattern   => File_Name);
+                       Directory => Spec_Directory_Path,
+                       Pattern   => File_Base_Name);
          
          Assert (Check   => More_Entries (Search),
                  Message => "Error generating checkout spec - cannot find "

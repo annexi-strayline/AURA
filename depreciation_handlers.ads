@@ -3,11 +3,9 @@
 --                     Ada User Repository Annex (AURA)                     --
 --                ANNEXI-STRAYLINE Reference Implementation                 --
 --                                                                          --
---                        Command Line Interface                            --
---                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2023, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -43,23 +41,48 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- This package contains copies of the All_Subsystems and All_Libraries sets
--- from the previous *successful* execution of AURA, if available.
+-- This package centralizes a series of subprograms that are invoked at
+-- the most appropriate locations to handle depreciated features or
+-- configurations. 
 --
--- If there is no saved infromation, or AURA decides the information is not
--- useful, the sets will be empty.
+-- Depreciation handler subprograms should contain all necessary checking
+-- and processing, and even user queries to deal with a specific depreciated
+-- feature.
+--
+-- Depreciaion handlers are required to be capable of patching any given
+-- AURA project to remove depreciated conditions, or to provide guidence
+-- to the user how to make their project complient.
+--
+-- ** Depreciation that cannot be patched causes any affected aura operation
+--    to fail.
 
-with Registrar.Subsystems;
-with Registrar.Library_Units;
+package Depreciation_Handlers is
+   
+   procedure AURA_Subdirectory (OK_To_Proceed: out Boolean);
+   
+   -- In early betas of AURA, the aura subsystem files were typically stored
+   -- in the project root. This ends up polluting the user's project with
+   -- files that might be better placed in their own subsystem subdirectory.
+   -- This is afterall where all other non-root subsystems normally go.
+   --
+   -- AURA does some special processing of aura subsystem units, particularly
+   -- during genration, and so this is a permanent change (depreciaion).
+   --
+   -- This hander is run as part of the new Scheduling.Enter_Project, which
+   -- replaced (the public) Enter_Root. The new Enter_Project will run this
+   -- handler, and abort or continue as appropriate.
+   --
+   -- First all units in the project root are entered, and then this handler
+   -- is invoked. if the aura subsystem is thereafter registered (indicating
+   -- AURA subsystem files exist in the project root), this handler prompts the
+   -- user to agree to to moving all AURA subsystem units to an aura
+   -- subdirectory.
+   --
+   -- Having AURA subsystem files in root is fully depreciated, and therefore
+   -- if the user rejects moving the AURA subsystem files via the prompt,
+   -- the AURA CLI aborts.
+   --
+   -- If the user rejects, or if an error occurs, OK_To_Proceed is False.
+   
+end Depreciation_Handlers;
 
-with Registrar.Last_Run_Store;
-
-package Registrar.Last_Run is
-   
-   All_Subsystems   : Subsystems.Subsystem_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
-   
-   All_Library_Units: Library_Units.Library_Unit_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
-   
-end Registrar.Last_Run;

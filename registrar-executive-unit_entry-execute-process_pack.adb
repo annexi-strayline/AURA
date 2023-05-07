@@ -236,6 +236,7 @@ package body Process_Pack is
    -------------------------
    
    procedure Process_Declaration is
+      use type Source_Pack.Source_File_Type;
    begin
       -- First check for "separate", in which case we are really
       -- not interested in the name of the separate unit (the subunit), but
@@ -310,10 +311,16 @@ package body Process_Pack is
       -- For all non-subunits, we want to get the name of the unit up until
       -- "is"
       
-      -- First skip the "body" reserved word if we find it
+      -- First check and skip the "body" reserved word if we find it
       Next_Element;
       
       if Category = Reserved_Word and then Content = "body" then
+         Assert (Check   => not New_Unit.Is_Generic,
+                 Message => "Only specifications can be generic.");
+         
+         Assert (Check   => Source_Pack.Unit_Source_Type = Source_Pack.Ada_Body,
+                 Message =>
+                   "Specification sources shall not contain bodies.");
          Next_Element;
       end if;
       

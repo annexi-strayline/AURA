@@ -85,14 +85,14 @@ package Registrar.Source_Files is
                     Item  : out Source_File_Access);
    
    procedure Write (Stream: not null access Ada.Streams.Root_Stream_Type'Class;
-                    Item  : in Source_File_Access) 
+                    Item  : in Source_File_Access)
      is null;
    
    for Source_File_Access'Read  use Read;
    for Source_File_Access'Write use Write;
-   -- We don't write anything, and always pretend to read-in null. This is to
-   -- facilitate rational 'Write and 'Read operations when streaming 
-   -- Library_Units
+   
+   -- We always write null, and always read-in null. This is to facilitate
+   -- rational 'Write and 'Read operations when streaming Library_Units
    
    
    function  Full_Name (Source: Source_File) return String;

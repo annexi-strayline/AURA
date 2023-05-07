@@ -340,14 +340,36 @@ begin
             end if;
             
          elsif Content = "generic" then
-            -- Skip the generic, arriving at either package. procedure,
-            -- or function
+            -- We need to skip the generic formal part of the generic
+            -- declaration. This might seem overly simplistic, but it should be
+            -- correct if you think about it.
+            --
+            -- Within a generic declaration's generic formal part, the only
+            -- time we will see something following a semicolon that is not a
+            -- reserved word is if it is a parameter specification of the 
+            -- formal part of a parameter profile, and in all cases we will
+            -- never see a "generic formal parameter declaration" that does not
+            -- begin- with "use" or "with", therefore we can just see if we 
+            -- hit the subprogram or package specification (reserved word
+            -- package, function, or procedure), or else we skip to the next
+            -- semicolon until we do.
+            --
+            -- This is a great example of how well the Ada syntax is actually
+            -- designed.
+            
             loop
-               Skip_To_Semicolon;
                Next_Element;
                exit when Category = Reserved_Word
                  and then Content in "package" | "function" | "procedure";
+               Skip_To_Semicolon;
             end loop;
+            
+            New_Unit.Is_Generic := True;
+            Process_Declaration;
+            exit;
+            
+            -- Process_Declaration will ensure this is actually a spec not
+            -- a body.
             
          elsif Content in 
            "separate" | "package" | "function" | "procedure" 
@@ -422,8 +444,9 @@ begin
    end;
    
    
-   -- AURA Subsystems need special treatment, as does the AURA Subsystem
-   -- itself!
+   -- AURA Subsystems (i.e. units of a subsystem, i.e. units not in the project
+   -- root) need special treatment, as does the actual AURA Subsystem itself!
+   
    if New_Unit.Name.Subsystem_Name.To_String = "aura" then
       
       -- AURA subsystems themselves should not have any units of the AURA
@@ -433,7 +456,22 @@ begin
       
       Assert (Check => not Order.AURA,
               Message => "Check manifest: AURA subsystems should not have " 
-                & "units of the AURA subsystem.");
+                & "units of the AURA subsystem itself.");
+      
+      -- The AURA subsystem strictly only contains packages, but we allow
+      -- first order Subunits generally. Due to in processing those we won't
+      -- know yet if a Subunit is part of a Package, but this will eventually
+      -- be caught below.
+      
+      Assert (Check => New_Unit.Kind in Package_Unit | Subunit,
+              Message => "The AURA subsystem shall only contain packages "
+                & "and/or subunits.");
+      
+      -- And they shall not be generic
+      
+      Assert (Check => not New_Unit.Is_Generic,
+              Message => "The AURA subsystem shall not contain generic "
+                & "(library) units.");
       
       -- Units of the AURA subsystem shouldn't ever have dependencies (besides
       -- the standard library) that are not also AURA subsystem units. 
@@ -477,11 +515,11 @@ begin
               &        "checkout package specs.");
       end if;
       
-      
+
    elsif Order.AURA then
       -- The provided subsystem and the unit's subsystem must match.
       -- Each AURA Subsystem shall only contain that subsystem, and
-      -- the manifest (AURA.Subsystem) only
+      -- the manifest (Subsystem.AURA) only
       
       Assert
         (Check => 
@@ -572,7 +610,9 @@ begin
          -- for example, there is an actual child package with the same name
          -- as a subunit - which isn't allowed anyways. (RM 10.1.3-14)
          
-         pragma Assert (Unit_Source_Type = Ada_Body);
+         Assert (Check   => Unit_Source_Type = Ada_Body,
+                 Message => "Subunits shall always be bodies.");
+         
          New_Unit.Subunit_Bodies.Append (Source);
          
       else
@@ -584,7 +624,7 @@ begin
                New_Unit.Body_File := Source;
                
             when Non_Ada =>
-               -- This shouldn't get here..
+               -- This won't be possible if the implementation is correct.
                raise Program_Error;
          end case;
       end if;

@@ -1,9 +1,7 @@
 ------------------------------------------------------------------------------
 --                                                                          --
 --                     Ada User Repository Annex (AURA)                     --
---                ANNEXI-STRAYLINE Reference Implementation                 --
---                                                                          --
---                        Command Line Interface                            --
+--                         Reference Implementation                         --
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
@@ -43,23 +41,44 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- This package contains copies of the All_Subsystems and All_Libraries sets
--- from the previous *successful* execution of AURA, if available.
---
--- If there is no saved infromation, or AURA decides the information is not
--- useful, the sets will be empty.
+separate (Repositories.AURA_Spec_Handling.Check_AURA_Spec)
 
-with Registrar.Subsystems;
-with Registrar.Library_Units;
+procedure Check_Package_Declaration is
 
-with Registrar.Last_Run_Store;
+begin
+   -- The AURA Spec is very specific and simple. We are strict about
+   -- the checking we do
+   
+   Next_Element;
+   Check (Category = Reserved_Word and then Content = "package",
+          "AURA spec shall be a package spec without "
+            &        "with clauses");
+   
+   if not Correct then return; end if;
+   
+   Next_Element;
+   Check (Category = Identifier and then Content = "aura",
+          "AURA package spec file does not have correct package name.");
+   
+   if not Correct then return; end if;
 
-package Registrar.Last_Run is
+   declare
+      No_Pure_Msg: constant String
+        := "AURA package shall be declared Pure with an aspect_specification";
+   begin
+      Next_Element;
+      Check (Category = Reserved_Word and then Content = "with", No_Pure_Msg);
+      
+      if not Correct then return; end if;
+      
+      Next_Element;
+      Check (Category = Identifier and then Content = "pure", No_Pure_Msg);
+   end;
    
-   All_Subsystems   : Subsystems.Subsystem_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
+   if not Correct then return; end if;
    
-   All_Library_Units: Library_Units.Library_Unit_Sets.Set
-     := Last_Run_Store.Load_Last_Run;
+   Next_Element;
+   Check (Category = Reserved_Word and then Content = "is",
+          "Malformed package declaration");
    
-end Registrar.Last_Run;
+end Check_Package_Declaration;
