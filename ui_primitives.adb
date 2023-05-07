@@ -875,8 +875,6 @@ package body UI_Primitives is
          loop
             Term_Update;
             
-            exit when Tracker.Is_Complete;
-            
             if Ada.Calendar.Clock > Deadline then
                Set_Column (1);
                Put_Fail_Tag;
@@ -897,8 +895,11 @@ package body UI_Primitives is
                User_Queries.Query_Manager.Take_Query (Query_Driver'Access);
                Prep_Output;
             end if;
+            
+            exit when Tracker.Is_Complete;
          end loop;
          
+         Term_Update;
          Post_Notices;
          
       else

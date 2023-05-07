@@ -313,7 +313,7 @@ package body Workers is
                Work_Queue.Dequeue (Dequeued_Order);
             end select;
             
-            -- If the order if a deferral order, it needs to be requeued on
+            -- If the order is a deferral order, it needs to be requeued on
             -- the deferral queue if it is not ready to execute yet
             if Dequeued_Order.Wait_Tracker /= null
               and then not Dequeued_Order.Wait_Tracker.Is_Complete
