@@ -397,7 +397,7 @@ package body Process_Pack is
    
    procedure Process_Parent_Dependencies is
       Parent_Name: Unit_Names.Unit_Name 
-        := Unit_Names.Unit_Name (New_Unit.Name.Parent_Name);
+        := New_Unit.Name.Parent_Name;
       
       Parent_Depend: Library_Unit;
    begin
