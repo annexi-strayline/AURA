@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -548,17 +548,29 @@ package body Build.Linking is
          
       end if;
       
-      
-      -- Now all the user libraries
+   end Add_Linker_Options;
+   
+   ------------------------
+   -- Add_User_Libraries --
+   ------------------------
+   
+   -- Adds "external libraries" defined in all configuration manifests.
+   -- These should come after all objects in case any of those libraries are
+   -- static. The order of subsystem being arbitary should not be an issue with
+   -- static libraries unless one static library depends on another, in which
+   -- case it should be included in the configuration manifest in the right
+   -- order
+   
+   procedure Add_User_Libraries (Args: in out UBS.Unbounded_String) is
+      use UBS;
+   begin
       for Subsys of Registrar.Queries.Available_Subsystems loop
          for Lib_Pair of Subsys.Configuration.External_Libraries loop
             Append (Args, " -l" & To_String (Lib_Pair.Value));
          end loop;
       end loop;
-      
-   end Add_Linker_Options;
-   
-   
+   end Add_User_Libraries;
+     
    -----------------
    -- Add_Runtime --
    -----------------
@@ -686,7 +698,8 @@ package body Build.Linking is
          end loop;
       end;
       
-      -- Finally the Ada Runtime
+      -- User and runtime libraries
+      Add_User_Libraries (Args);
       Add_Runtime (Configuration, Args);
       
       -- Record the command
@@ -796,7 +809,8 @@ package body Build.Linking is
          end if;
          
          Add_Linker_Options (Configuration, Linker_Options);
-
+         Add_User_Libraries (Linker_Options);
+         Add_Runtime (Configuration, Linker_Options);
          
          if Ada.Directories.Exists (Path) then
             Open (File => LO_File,
