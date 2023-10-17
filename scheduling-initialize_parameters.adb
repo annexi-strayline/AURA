@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2021, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -303,7 +303,6 @@ begin
          when 's' =>
             if Arg = "-static" then
                Parameters.Build_Config.Linking := Static;
-               Parameters.Build_Config.Position_Independent := False;
             elsif Arg = "-static-rt" then
                Parameters.Build_Config.Linking := Static_RT;
             else

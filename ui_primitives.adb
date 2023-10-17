@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -243,8 +243,9 @@ package body UI_Primitives is
       Put_Line ("-static      Attempts to force the executable to be fully");
       Put_Line ("             statically linked (including libc, pthreads,");
       Put_Line ("             etc.) Only use this option if you know what");
-      Put_Line ("             you are doing. This option implies -no-pic");
-      Put_Line ("             and -static-rt");
+      Put_Line ("             you are doing. This option implies -static-rt.");
+      Put_Line ("             Note that position-independant code may still");
+      Put_Line ("             be generated unless -no-pie is given.");
       New_Line;
       Put_Line ("All other parameters are passed to compile. Like compile,");
       Put_Line ("these options are persistent between runs.");
