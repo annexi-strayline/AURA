@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2023, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -105,7 +105,7 @@ package Build is
       -- Optimize for size (-Os)
       
       Debug);
-       -- Optimize for debugging (-Og)
+       -- Optimize for debugging (-O0)
    
    
    type Build_Configuration is

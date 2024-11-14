@@ -290,7 +290,7 @@ package body Build.Compilation is
          when Level_3 => Append (Buffer, " -O3");
             
          when Size    => Append (Buffer, " -Os");
-         when Debug   => Append (Buffer, " -Og");
+         when Debug   => Append (Buffer, " -O0");
       end case;
       
       
