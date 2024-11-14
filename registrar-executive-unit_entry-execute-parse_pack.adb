@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2024, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -46,12 +46,6 @@
 separate (Registrar.Executive.Unit_Entry.Execute)
 
 package body Parse_Pack is
-   
-   Source: Source_Buffer (Source_Pack.Stream'Access);
-   -- The parse buffer
-   
-   E: Lexical_Element;
-   -- Last element parsed
    
    -------------
    -- Content --

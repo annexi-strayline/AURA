@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020-2021, ANNEXI-STRAYLINE Trans-Human Ltd.              --
+--  Copyright (C) 2020-2024, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -134,6 +134,17 @@ procedure Execute (Order: in out Unit_Entry_Order) is
       -- Raise an Invalid_Unit exception with information identifiying
       -- the location of the offending element in the source
       
+   private
+      -- TODO: Move these back int othe package body at some point. They were
+      -- moved here due to a (temporary) bug in GCC 14.2, once 14.2 becomes
+      -- old enough, this can be reverted.
+      
+      Source: Source_Buffer (Source_Pack.Stream'Access);
+      -- The parse buffer
+   
+      E: Lexical_Element;
+      -- Last element parsed
+      
    end Parse_Pack;
    
    
@@ -165,6 +176,13 @@ procedure Execute (Order: in out Unit_Entry_Order) is
       -- Prepends New_Unit.Name.Subsystem, plus a '%' to the name of each unit
       -- of the set of staged external with units, and then unions that set
       -- with Dependencies
+      
+   private
+      -- TODO: See private part of Parse_Pack above.
+      
+      Staged_Externals: Library_Unit_Sets.Set;
+      -- All External_With units that have not yet had their subsystem name
+      -- prepended, or included in the Dependencies set
       
    end Process_Pack;
    

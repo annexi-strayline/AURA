@@ -7,7 +7,7 @@
 --                                                                          --
 -- ------------------------------------------------------------------------ --
 --                                                                          --
---  Copyright (C) 2020, ANNEXI-STRAYLINE Trans-Human Ltd.                   --
+--  Copyright (C) 2020-2024, ANNEXI-STRAYLINE Inc.                          --
 --  All rights reserved.                                                    --
 --                                                                          --
 --  Original Contributors:                                                  --
@@ -156,10 +156,6 @@ package body Process_Pack is
    ---------------------------
    -- Process_External_With --
    ---------------------------
-   
-   Staged_Externals: Library_Unit_Sets.Set;
-   -- All External_With units that have not yet had their subsystem name
-   -- prepended, or included in the Dependencies set
    
    procedure Process_External_With is
       New_Depend: Library_Unit;
