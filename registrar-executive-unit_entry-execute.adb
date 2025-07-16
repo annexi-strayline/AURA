@@ -345,12 +345,14 @@ begin
             end if;
             
          elsif Content = "limited" then
-            -- We expect only a with to follow
+            -- We expect only "private with" or with" to follow
             Next_Element;
             
-            if Category = Reserved_Word 
-              and then Content = "with"
-            then
+            if Category = Reserved_Word and then Content = "private" then
+               Next_Element;
+            end if;
+
+            if Category = Reserved_Word and then Content = "with" then
                Process_With;
                Next_Element;
             else
